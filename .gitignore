@@ -221,3 +221,6 @@ docs/api/
 !notebooks/*.ipynb
 !docker/Dockerfile
 !docker/docker-compose.yml
+
+
+main.py
