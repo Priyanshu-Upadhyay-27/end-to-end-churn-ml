@@ -74,3 +74,27 @@ async def predict(data: CustomerData):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Inference Error: {str(e)}")
+
+
+@app.post("/predict_batch")
+async def predict_batch(data_list: List[CustomerData]):
+    """Handles bulk CSV processing instantly."""
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded.")
+
+    try:
+        input_df = pd.DataFrame([data.model_dump() for data in data_list])
+
+        probs = model.predict_proba(input_df)[:, 1]
+
+        results = []
+        for i, prob in enumerate(probs):
+            results.append({
+                "row_index": i,
+                "probability": round(float(prob), 4),
+                "prediction": 1 if prob >= 0.5 else 0
+            })
+
+        return {"batch_results": results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
