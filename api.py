@@ -49,9 +49,10 @@ def load_model():
         # This will keep the variable 'model' as None, causing /predict to fail safely
 
 
-@app.get("/health")
-def health_check():
-    return {"status": "online", "model_loaded": model is not None}
+@app.get("/info")
+def model_info():
+    """Returns metadata about the active model for the UI."""
+    return {"status": "online", "active_run_id": RUN_ID, "model_loaded": model is not None}
 
 
 @app.post("/predict")
