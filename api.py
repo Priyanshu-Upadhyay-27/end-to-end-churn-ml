@@ -49,3 +49,27 @@ def load_model():
         # This will keep the variable 'model' as None, causing /predict to fail safely
 
 
+@app.get("/health")
+def health_check():
+    return {"status": "online", "model_loaded": model is not None}
+
+
+@app.post("/predict")
+async def predict(data: CustomerData):
+
+    try:
+
+        input_df = pd.DataFrame([data.model_dump()])
+
+        probs = model.predict_proba(input_df)
+        probability = float(probs[0][1])
+
+        prediction = 1 if probability >= 0.5 else 0
+
+        return {
+            "prediction": prediction,
+            "probability": round(probability, 4),
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Inference Error: {str(e)}")
