@@ -5,7 +5,6 @@ import mlflow.sklearn
 from pathlib import Path
 import os
 
-
 class CustomerData(BaseModel):
     gender: str
     SeniorCitizen: int
@@ -77,7 +76,7 @@ async def predict(data: CustomerData):
 
 
 @app.post("/predict_batch")
-async def predict_batch(data_list: List[CustomerData]):
+async def predict_batch(data_list: list[CustomerData]):
     """Handles bulk CSV processing instantly."""
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded.")
@@ -94,7 +93,6 @@ async def predict_batch(data_list: List[CustomerData]):
                 "probability": round(float(prob), 4),
                 "prediction": 1 if prob >= 0.5 else 0
             })
-
         return {"batch_results": results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
