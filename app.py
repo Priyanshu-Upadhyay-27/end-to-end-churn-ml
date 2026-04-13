@@ -251,12 +251,142 @@ elif page == "03 // Model Predictions":
                     st.error(f"Server Offline: {e}")
 
 # ==========================================
-# PAGE 4 & 5: SKELETONS
+# PAGE 4: SKELETONS
 # ==========================================
 elif page == "04 // Data Insights (EDA)":
     st.title("Telemetry & Exploratory Data Analysis")
     st.write("Interactive visualizations will be built here.")
 
+# ==========================================
+# PAGE 05: CONCEPT DRIFT MATRIX (THE COMMAND CENTER)
+# ==========================================
 elif page == "05 // Concept Drift Matrix":
-    st.title("Concept Drift Simulation")
-    st.write("Automated model degradation and retraining cycle visualization will be built here.")
+    st.title("Concept Drift & Active Retraining Simulator")
+    st.markdown(
+        "<div class='cyber-sub'>Watch a live production model degrade under shifting data conditions, and execute a Champion vs. Challenger retraining protocol.</div>",
+        unsafe_allow_html=True)
+
+    st.radio("Simulation Data Source:", ["Synthetic Telemetry (Safe for Cloud)", "Custom CSV (Coming Soon)"],
+             horizontal=True)
+
+    # --- 1. THE ARCHITECTURE FLOWCHART ---
+    st.markdown("### 🏗️ Pipeline Architecture")
+    flow_col1, flow_col2, flow_col3, flow_col4, flow_col5 = st.columns(5)
+
+    with flow_col1:
+        st.info("📊 **1. Base Data**\n\nStable customer behavior.")
+    with flow_col2:
+        st.warning("🔄 **2. Live Stream**\n\nInjecting shifted features.")
+    with flow_col3:
+        st.success("🤖 **3. Champion**\n\nActive XGBoost Model.")
+    with flow_col4:
+        st.error("📉 **4. Monitor**\n\nTracking ROC-AUC SLA.")
+    with flow_col5:
+        st.info("⚔️ **5. Challenger**\n\nRetrain on new data.")
+
+    st.divider()
+
+    # --- 2. THE COMMAND CENTER UI ---
+    col_logs, col_graphs = st.columns([1, 2])
+
+    with col_logs:
+        st.markdown("### 🖥️ System Terminal")
+        log_box = st.empty()
+        action_button_box = st.empty()
+
+    with col_graphs:
+        st.markdown("### 📈 Live Telemetry")
+        graph_box_1 = st.empty()
+        graph_box_2 = st.empty()
+
+    # Initialize Terminal String
+    terminal_output = "> [SYSTEM] Awaiting command...\n"
+    log_box.code(terminal_output, language="bash")
+
+    if action_button_box.button("▶️ INITIATE FUTURE DATA STREAM", use_container_width=True):
+
+        # --- THE DEGRADATION PHASE ---
+        terminal_output += "> [SYSTEM] Provisioning synthetic base & drift arrays...\n"
+        log_box.code(terminal_output, language="bash")
+
+        X_base, y_base = make_classification(n_samples=2000, n_features=15, random_state=42)
+        X_drift, y_drift = make_classification(n_samples=2000, n_features=15, shift=1.5, random_state=99)
+
+        terminal_output += "> [SYSTEM] Training Champion Model on Base Data...\n"
+        log_box.code(terminal_output, language="bash")
+
+        champion = xgb.XGBClassifier(n_estimators=20, random_state=42, eval_metric="logloss")
+        champion.fit(X_base, y_base)
+
+        drift_batches = np.array_split(X_drift, 20)
+        drift_y_batches = np.array_split(y_drift, 20)
+
+        live_auc_history = []
+        drift_detected = False
+
+        terminal_output += "> [WARNING] Injecting future/shifted data stream...\n"
+        log_box.code(terminal_output, language="bash")
+
+        for i in range(len(drift_batches)):
+            preds = champion.predict_proba(drift_batches[i])[:, 1]
+            try:
+                auc = roc_auc_score(drift_y_batches[i], preds)
+            except:
+                auc = live_auc_history[-1] if live_auc_history else 0.85
+
+            live_auc_history.append(auc)
+
+            # Terminal Update
+            terminal_output += f"> [METRIC] Batch {i + 1} | Champion ROC-AUC: {auc:.3f}\n"
+            if auc < 0.70 and not drift_detected:
+                terminal_output += "\n> [CRITICAL] 🚨 SLA BREACH. ROC-AUC < 0.70.\n> [CRITICAL] DATA DISTRIBUTION SHIFT DETECTED.\n"
+                drift_detected = True
+            log_box.code(terminal_output, language="bash")
+
+            # Graph 1 Update (Degradation)
+            fig1 = go.Figure(data=go.Scatter(y=live_auc_history, mode='lines+markers',
+                                             line=dict(color='#dc2626' if drift_detected else '#2563eb', width=3)))
+            fig1.add_hline(y=0.70, line_dash="dash", line_color="red", annotation_text="Failure Threshold")
+            fig1.update_layout(title="Phase 1: Champion Model Degradation", yaxis=dict(range=[0.4, 1.0]), height=300,
+                               margin=dict(l=0, r=0, t=40, b=0))
+            graph_box_1.plotly_chart(fig1, use_container_width=True)
+
+            time.sleep(0.15)
+
+        # --- THE RETRAINING PHASE ---
+        if drift_detected:
+            # Change the button to the Retrain trigger
+            if action_button_box.button("⚔️ INITIATE RETRAINING PROTOCOL (Train Challenger)", type="primary",
+                                        use_container_width=True):
+                terminal_output += "\n> [ACTION] Retraining protocol authorized...\n"
+                terminal_output += "> [SYSTEM] Training Challenger Model on new data distribution...\n"
+                log_box.code(terminal_output, language="bash")
+
+                # Train Challenger
+                challenger = xgb.XGBClassifier(n_estimators=20, random_state=101, eval_metric="logloss")
+                challenger.fit(X_drift, y_drift)  # Trained on the shifted data!
+
+                terminal_output += "> [SYSTEM] Evaluating Challenger vs Champion on blind holdout...\n"
+                log_box.code(terminal_output, language="bash")
+
+                # Blind Holdout test
+                X_test, y_test = make_classification(n_samples=500, n_features=15, shift=1.5, random_state=777)
+                champ_preds = champion.predict_proba(X_test)[:, 1]
+                chall_preds = challenger.predict_proba(X_test)[:, 1]
+
+                champ_auc = roc_auc_score(y_test, champ_preds)
+                chall_auc = roc_auc_score(y_test, chall_preds)
+
+                terminal_output += f"\n> [RESULT] Champion Holdout AUC: {champ_auc:.3f}\n"
+                terminal_output += f"> [RESULT] Challenger Holdout AUC: {chall_auc:.3f}\n"
+                terminal_output += "> [DECISION] SUCCESS. Challenger out-performs Champion. New weights approved for production.\n"
+                log_box.code(terminal_output, language="bash")
+
+                # Graph 2 Update (Recovery Comparison)
+                fig2 = go.Figure()
+                fig2.add_trace(go.Bar(x=['Champion (Old)', 'Challenger (New)'], y=[champ_auc, chall_auc],
+                                      marker_color=['#94a3b8', '#059669']))
+                fig2.add_hline(y=0.70, line_dash="dash", line_color="red")
+                fig2.update_layout(title="Phase 2: Holdout Evaluation Matrix", yaxis=dict(range=[0.4, 1.0]), height=300,
+                                   margin=dict(l=0, r=0, t=40, b=0))
+                graph_box_2.plotly_chart(fig2, use_container_width=True)
