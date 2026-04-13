@@ -3,25 +3,34 @@ import pandas as pd
 import requests
 import time
 
-# --- CONFIGURATION & CYBERPUNK CSS ---
-st.set_page_config(page_title="Churn OS | Retention Radar", page_icon="🛰️", layout="wide")
+# --- CONFIGURATION & ENTERPRISE CLEAN CSS ---
+st.set_page_config(page_title="Retention Intelligence", page_icon="📊", layout="wide")
 
 st.markdown("""
     <style>
-    /* Main Background & Text */
-    .stApp { background-color: #0b0c10; color: #c5c6c7; font-family: 'Inter', sans-serif; }
+    /* Hide the Streamlit top header */
+    [data-testid="stHeader"] { display: none; }
 
-    /* Headings */
-    h1, h2, h3 { color: #66fcf1 !important; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; }
+    /* Main Background & Text (Light Mode) */
+    .stApp { background-color: #f4f6f9; color: #334155; font-family: 'Inter', sans-serif; }
+
+    /* Headings (Deep Slate) */
+    h1, h2, h3 { color: #0f172a !important; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; }
     h1 { margin-top: 0rem !important; padding-top: 0rem !important; font-size: 3.5rem; }
 
-    /* Neon Accents */
-    .neon-red { color: #ff003c; text-shadow: 0 0 10px rgba(255, 0, 60, 0.5); font-weight: bold; font-size: 1.2rem; }
-    .neon-green { color: #00f0ff; text-shadow: 0 0 10px rgba(0, 240, 255, 0.5); font-weight: bold; font-size: 1.2rem; }
+    /* Clean Enterprise Accents */
+    .neon-red { color: #dc2626; font-weight: bold; font-size: 1.2rem; } /* Brick Red */
+    .neon-green { color: #059669; font-weight: bold; font-size: 1.2rem; } /* Emerald Green */
 
-    /* Sidebar Navigation Font Visibility Fix */
-    [data-testid="stSidebar"] { background-color: #1a202c; border-right: 1px solid #45a29e; }
-    [data-testid="stSidebar"] .stRadio p { color: #ffffff !important; font-size: 1.1rem !important; margin-bottom: 8px;}
+    /* Subheaders */
+    .cyber-sub { border-left: 4px solid #2563eb; padding-left: 10px; margin-bottom: 20px; color: #475569; }
+
+    /* Sidebar Navigation */
+    [data-testid="stSidebar"] { background-color: #ffffff; border-right: 1px solid #e2e8f0; }
+    [data-testid="stSidebar"] .stRadio p { color: #1e293b !important; font-weight: 600; font-size: 1.1rem !important; margin-bottom: 8px;}
+
+    /* Metrics Numbers (Cobalt Blue) */
+    [data-testid="stMetricValue"] { color: #2563eb; font-weight: 800; }
 
     /* Toggle Button Styling */
     div[role="radiogroup"] { padding-bottom: 20px; }
@@ -88,10 +97,15 @@ page = st.sidebar.radio("Navigation", [
 # PAGE 1: INTRODUCTION
 # ==========================================
 if page == "01 // Introduction":
-    st.markdown("<h1 style='text-align: center;'>ANTICIPATE. INTERVENE. RETAIN.</h1>", unsafe_allow_html=True)
     st.markdown(
-        "<p style='text-align: center; font-size: 1.2rem; color: #45a29e;'>Advanced Telecommunications Churn Analytics OS</p>",
+        "<h1 style='text-align: center; color: #0f172a;'>CUSTOMER RETENTION <span style='color: #2563eb;'>INTELLIGENCE</span></h1>",
         unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; color: #64748b; font-weight: 400;'>ANTICIPATE. INTERVENE. RETAIN.</h3>",
+                unsafe_allow_html=True)
+    st.markdown(
+        "<p style='text-align: center; font-size: 1rem; color: #94a3b8;'>Advanced Telecommunications Churn Analytics</p>",
+        unsafe_allow_html=True)
+
     st.divider()
 
     col1, col2, col3 = st.columns(3)
@@ -101,14 +115,16 @@ if page == "01 // Introduction":
 
     st.markdown("### ⚡ The Objective")
     st.write(
-        "Customer attrition is a silent revenue killer. This OS deploys a highly tuned XGBoost pipeline to scan account metadata, service configurations, and billing histories to identify flight-risk customers *before* they cancel their contracts. Select a module from the sidebar to begin.")
+        "Customer attrition is a silent revenue killer. This platform deploys a highly tuned XGBoost pipeline to scan account metadata, service configurations, and billing histories to identify flight-risk customers *before* they cancel their contracts. Select a module from the sidebar to begin.")
 
 # ==========================================
 # PAGE 2: BUSINESS STRATEGY (RECALL@20)
 # ==========================================
 elif page == "02 // Business Strategy (Recall@20)":
     st.title("Business Strategy Tracker")
-    st.write("Focus: Identifying the Top 20% Highest-Risk Accounts for maximum Retention ROI.")
+    st.markdown(
+        "<div class='cyber-sub'>Focus: Identifying the Top 20% Highest-Risk Accounts for maximum Retention ROI.</div>",
+        unsafe_allow_html=True)
 
     input_mode = st.radio("Input Method:", ["Single Target Form", "Batch Processing (CSV Upload)"], horizontal=True)
 
@@ -116,19 +132,24 @@ elif page == "02 // Business Strategy (Recall@20)":
         payload = render_input_form("biz")
         if payload:
             with st.spinner("Analyzing..."):
-                response = requests.post(f"{API_URL}/predict", json=payload)
-                if response.status_code == 200:
-                    prob = response.json()['probability']
-                    st.divider()
-                    if prob >= 0.80:  # Business logic: High risk threshold
-                        st.markdown(f"<span class='neon-red'>⚠️ CRITICAL RISK (Top Percentile)</span>",
-                                    unsafe_allow_html=True)
-                        st.write("Recommend immediate High-Value Retention Protocol (Discount/Upgrade).")
+                try:
+                    response = requests.post(f"{API_URL}/predict", json=payload)
+                    if response.status_code == 200:
+                        prob = response.json()['probability']
+                        st.divider()
+                        if prob >= 0.80:
+                            st.markdown(f"<span class='neon-red'>⚠️ CRITICAL RISK (Top Percentile)</span>",
+                                        unsafe_allow_html=True)
+                            st.write("Recommend immediate High-Value Retention Protocol (Discount/Upgrade).")
+                        else:
+                            st.markdown(f"<span class='neon-green'>✅ MODERATE TO LOW RISK</span>",
+                                        unsafe_allow_html=True)
+                        st.progress(prob)
+                        st.write(f"**Calculated Probability:** {prob * 100:.2f}%")
                     else:
-                        st.markdown(f"<span class='neon-green'>✅ MODERATE TO LOW RISK</span>", unsafe_allow_html=True)
-                    st.progress(prob)
-                else:
-                    st.error("API Error.")
+                        st.error(f"API Error: {response.text}")
+                except Exception as e:
+                    st.error(f"Server Offline: {e}")
 
     elif input_mode == "Batch Processing (CSV Upload)":
         uploaded_file = st.file_uploader("Drop Customer CSV Here", type=["csv"])
@@ -138,25 +159,55 @@ elif page == "02 // Business Strategy (Recall@20)":
             api_df = df.drop(columns=["Churn"]) if has_ground_truth else df.copy()
 
             with st.spinner("Processing massive dataset..."):
-                response = requests.post(f"{API_URL}/predict_batch", json=api_df.to_dict(orient="records"))
-                if response.status_code == 200:
-                    res_df = pd.DataFrame(response.json()["batch_results"])
-                    final_df = pd.concat([df, res_df[['probability', 'prediction']]], axis=1)
-                    final_df = final_df.sort_values(by="probability", ascending=False).reset_index(drop=True)
+                try:
+                    response = requests.post(f"{API_URL}/predict_batch", json=api_df.to_dict(orient="records"))
+                    if response.status_code == 200:
+                        res_df = pd.DataFrame(response.json()["batch_results"])
+                        final_df = pd.concat([df, res_df[['probability', 'prediction']]], axis=1)
+                        final_df = final_df.sort_values(by="probability", ascending=False).reset_index(drop=True)
 
-                    top_20_cutoff = int(len(final_df) * 0.20)
-                    top_20_df = final_df.head(top_20_cutoff)
+                        top_20_cutoff = int(len(final_df) * 0.20)
+                        top_20_df = final_df.head(top_20_cutoff)
 
-                    st.success(f"Scan Complete. Isolated {top_20_cutoff} critical targets.")
-                    st.dataframe(top_20_df.style.background_gradient(cmap="Reds", subset=["probability"]),
-                                 use_container_width=True)
+                        st.success(f"Scan Complete. Isolated {top_20_cutoff} critical targets.")
+
+                        if has_ground_truth:
+                            # Safely convert target to binary for math
+                            if final_df['Churn'].dtype == 'object':
+                                final_df['Churn_Binary'] = final_df['Churn'].map({'Yes': 1, 'No': 0})
+                                top_20_df['Churn_Binary'] = top_20_df['Churn'].map({'Yes': 1, 'No': 0})
+                            else:
+                                final_df['Churn_Binary'] = final_df['Churn']
+                                top_20_df['Churn_Binary'] = top_20_df['Churn']
+
+                            total_actual_churners = final_df['Churn_Binary'].sum()
+                            captured_churners = top_20_df['Churn_Binary'].sum()
+                            recall_at_20 = (
+                                        captured_churners / total_actual_churners * 100) if total_actual_churners > 0 else 0
+
+                            st.markdown("### 📊 Evaluation Metrics")
+                            mcol1, mcol2, mcol3 = st.columns(3)
+                            mcol1.metric("Total Actual Churners in CSV", int(total_actual_churners))
+                            mcol2.metric("Churners Caught in Top 20%", int(captured_churners))
+                            mcol3.metric("Recall @ 20", f"{recall_at_20:.2f}%", delta="Matched Notebook")
+                            st.divider()
+
+                        # Formatting output dataframe (dropping internal binary column before display)
+                        display_df = top_20_df.drop(columns=['Churn_Binary'], errors='ignore')
+                        st.dataframe(display_df.style.background_gradient(cmap="Reds", subset=["probability"]),
+                                     use_container_width=True)
+                    else:
+                        st.error(f"API Error: {response.text}")
+                except Exception as e:
+                    st.error(f"Server Offline: {e}")
 
 # ==========================================
 # PAGE 3: MODEL PREDICTIONS (STANDARD)
 # ==========================================
 elif page == "03 // Model Predictions":
     st.title("Global Prediction Engine")
-    st.write("Focus: Standard classification based on the 0.5 decision threshold.")
+    st.markdown("<div class='cyber-sub'>Focus: Standard classification based on the 0.5 decision threshold.</div>",
+                unsafe_allow_html=True)
 
     input_mode = st.radio("Input Method:", ["Single Target Form", "Batch Processing (CSV Upload)"], horizontal=True)
 
@@ -164,30 +215,40 @@ elif page == "03 // Model Predictions":
         payload = render_input_form("mod")
         if payload:
             with st.spinner("Inferencing..."):
-                response = requests.post(f"{API_URL}/predict", json=payload)
-                if response.status_code == 200:
-                    data = response.json()
-                    st.divider()
-                    if data['prediction'] == 1:
-                        st.markdown("<span class='neon-red'>⚠️ CHURN DETECTED</span>", unsafe_allow_html=True)
+                try:
+                    response = requests.post(f"{API_URL}/predict", json=payload)
+                    if response.status_code == 200:
+                        data = response.json()
+                        st.divider()
+                        if data['prediction'] == 1:
+                            st.markdown("<span class='neon-red'>⚠️ CHURN DETECTED</span>", unsafe_allow_html=True)
+                        else:
+                            st.markdown("<span class='neon-green'>✅ ACCOUNT STABLE</span>", unsafe_allow_html=True)
+                        st.write(f"**Raw Probability:** {data['probability']:.4f}")
+                        st.progress(data['probability'])
                     else:
-                        st.markdown("<span class='neon-green'>✅ ACCOUNT STABLE</span>", unsafe_allow_html=True)
-                    st.write(f"Raw Probability: {data['probability']:.4f}")
-                    st.progress(data['probability'])
-                else:
-                    st.error("API Error.")
+                        st.error(f"API Error: {response.text}")
+                except Exception as e:
+                    st.error(f"Server Offline: {e}")
 
     elif input_mode == "Batch Processing (CSV Upload)":
         uploaded_file = st.file_uploader("Drop Customer CSV Here", type=["csv"], key="mod_upload")
         if uploaded_file and st.button("Run Global Scan"):
             df = pd.read_csv(uploaded_file)
             api_df = df.drop(columns=["Churn"]) if "Churn" in df.columns else df.copy()
+
             with st.spinner("Processing dataset..."):
-                response = requests.post(f"{API_URL}/predict_batch", json=api_df.to_dict(orient="records"))
-                if response.status_code == 200:
-                    res_df = pd.DataFrame(response.json()["batch_results"])
-                    final_df = pd.concat([df, res_df[['probability', 'prediction']]], axis=1)
-                    st.dataframe(final_df, use_container_width=True)
+                try:
+                    response = requests.post(f"{API_URL}/predict_batch", json=api_df.to_dict(orient="records"))
+                    if response.status_code == 200:
+                        res_df = pd.DataFrame(response.json()["batch_results"])
+                        final_df = pd.concat([df, res_df[['probability', 'prediction']]], axis=1)
+                        st.success("Global Classification Complete.")
+                        st.dataframe(final_df, use_container_width=True)
+                    else:
+                        st.error(f"API Error: {response.text}")
+                except Exception as e:
+                    st.error(f"Server Offline: {e}")
 
 # ==========================================
 # PAGE 4 & 5: SKELETONS
