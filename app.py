@@ -8,8 +8,7 @@ import joblib
 import plotly.graph_objects as go
 import xgboost as xgb
 from sklearn.base import clone
-from sklearn.datasets import make_classification
-from sklearn.metrics import recall_score, roc_auc_score
+from sklearn.metrics import recall_score
 
 # ==========================================
 # INTERNAL MODEL LOGIC (REPLACING FASTAPI)
@@ -47,6 +46,7 @@ def get_model_probability(input_data):
         return float(probabilities[0][1])
     return None
 
+
 # 2. Prediction Helper Function
 # This replaces the 'requests.post' call you would have made to FastAPI
 def get_model_prediction(input_data):
@@ -67,7 +67,6 @@ def get_model_prediction(input_data):
 # ==========================================
 # END OF INTERNAL MODEL LOGIC
 # ==========================================
-
 
 
 ########################Custom Functions for app.py#####################
@@ -133,6 +132,7 @@ def binaryEncoder(X):
 
 binary_encoder_transformer = FunctionTransformer(binaryEncoder)
 
+
 # ==========================================
 # CUSTOM SYSTEMATIC DRIFT FUNCTION
 # ==========================================
@@ -159,7 +159,7 @@ def inject_systematic_drift(df_batch, batch_index, total_batches):
     return df_mod
 
 
-#--- CONFIGURATION & ENTERPRISE CLEAN CSS ---
+# --- CONFIGURATION & ENTERPRISE CLEAN CSS ---
 st.set_page_config(page_title="Retention Intelligence", page_icon="📊", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
@@ -187,9 +187,9 @@ st.markdown("""
 
     /* Metrics Numbers */
     [data-testid="stMetricValue"] { color: #2563eb; font-weight: 800; }
-    
-    
-    
+
+
+
     /* Custom Dark Terminal */
     .terminal-box {
         background-color: #0f172a;
@@ -305,7 +305,8 @@ elif page == "Business Strategy (Recall@20)":
         "<div class='cyber-sub'>Focus: Identifying the Top 20% Highest-Risk Accounts for maximum Retention ROI.</div>",
         unsafe_allow_html=True)
 
-    input_mode = st.radio("Input Method:", ["Single Target Form", "Batch Processing (CSV Upload)"], horizontal=True, key="input_mode_biz")
+    input_mode = st.radio("Input Method:", ["Single Target Form", "Batch Processing (CSV Upload)"], horizontal=True,
+                          key="input_mode_biz")
 
     if input_mode == "Single Target Form":
         payload = render_input_form("biz")
@@ -362,7 +363,7 @@ elif page == "Business Strategy (Recall@20)":
                             total_actual_churners = final_df['Churn_Binary'].sum()
                             captured_churners = top_20_df['Churn_Binary'].sum()
                             recall_at_20 = (
-                                        captured_churners / total_actual_churners * 100) if total_actual_churners > 0 else 0
+                                    captured_churners / total_actual_churners * 100) if total_actual_churners > 0 else 0
 
                             st.markdown("### 📊 Evaluation Metrics")
                             mcol1, mcol2, mcol3 = st.columns(3)
@@ -388,7 +389,8 @@ elif page == "Model Predictions":
     st.markdown("<div class='cyber-sub'>Focus: Standard classification based on the 0.5 decision threshold.</div>",
                 unsafe_allow_html=True)
 
-    input_mode = st.radio("Input Method:", ["Single Target Form", "Batch Processing (CSV Upload)"], horizontal=True, key="input_mode_global")
+    input_mode = st.radio("Input Method:", ["Single Target Form", "Batch Processing (CSV Upload)"], horizontal=True,
+                          key="input_mode_global")
 
     if input_mode == "Single Target Form":
         payload = render_input_form("mod")
@@ -539,7 +541,6 @@ elif "Concept Drift Matrix" == page:
     st.divider()
 
     # --- 4. THE COMMAND CENTER UI ---
-    # --- 4. THE COMMAND CENTER UI ---
     col_logs, col_graphs = st.columns([1, 2])
 
     with col_logs:
@@ -576,7 +577,8 @@ elif "Concept Drift Matrix" == page:
                     st.error("Uploaded CSV is too small. Please provide at least 300 rows for stream simulation.")
                     st.stop()
             else:
-                DEFAULT_DATA_PATH = r"C:\Users\priya\Desktop\PyCh_Pro\Churn_Analysis_and_Modelling\data\raw\stream_data.csv"
+                # --- FIXED: USING CLOUD-READY RELATIVE PATH ---
+                DEFAULT_DATA_PATH = "data/raw/stream_data.csv"
                 st.session_state.terminal_text += f"> [SYSTEM] Loading native 1047-row stream...\n"
                 log_box.code(st.session_state.terminal_text, language="bash")
 
@@ -688,7 +690,8 @@ elif "Concept Drift Matrix" == page:
         st.session_state.terminal_text += "> [SYSTEM] Fetching original 70% Base Data to prevent Catastrophic Forgetting...\n"
         log_box.code(st.session_state.terminal_text, language="bash")
 
-        BASE_DATA_PATH = r"C:\Users\priya\Desktop\PyCh_Pro\Churn_Analysis_and_Modelling\data\raw\train_data.csv"
+        # --- FIXED: USING CLOUD-READY RELATIVE PATH ---
+        BASE_DATA_PATH = "data/raw/train_data.csv"
 
         if os.path.exists(BASE_DATA_PATH):
             df_base = pd.read_csv(BASE_DATA_PATH)
