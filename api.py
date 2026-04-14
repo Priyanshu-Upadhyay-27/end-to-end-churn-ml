@@ -36,6 +36,10 @@ def binaryEncoder(X):
             df[col] = df[col].map(mapping).fillna(df[col])
     return df
 
+import __main__
+__main__.preprocessing_raw_data = preprocessing_raw_data
+__main__.binaryEncoder = binaryEncoder
+
 # Initialize dummy transformers just in case the pipeline looks for them by name in this namespace
 new_feature_clean_transformer = FunctionTransformer(preprocessing_raw_data)
 binary_encoder_transformer = FunctionTransformer(binaryEncoder)
