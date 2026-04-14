@@ -86,17 +86,14 @@ def inject_systematic_drift(df_batch, batch_index, total_batches):
     metrics to blind the Champion model.
     """
     df_mod = df_batch.copy()
-    drift_intensity = (batch_index + 1) / total_batches  # Scales from >0.0 to 1.0
+    drift_intensity = (batch_index + 1) / total_batches
 
-    # 1. Extreme Price Drop (up to 65% reduction)
     if 'MonthlyCharges' in df_mod.columns:
         df_mod['MonthlyCharges'] = df_mod['MonthlyCharges'] * (1 - (0.65 * drift_intensity))
 
-    # 2. Fake Loyalty (add up to 48 months of artificial tenure)
     if 'tenure' in df_mod.columns:
         df_mod['tenure'] = df_mod['tenure'] + (48 * drift_intensity)
 
-    # 3. Inflate Total Charges to make them look incredibly profitable
     if 'TotalCharges' in df_mod.columns:
         temp_total = pd.to_numeric(df_mod['TotalCharges'], errors='coerce').fillna(0)
         temp_total = temp_total + (2500 * drift_intensity)
@@ -133,6 +130,23 @@ st.markdown("""
 
     /* Metrics Numbers */
     [data-testid="stMetricValue"] { color: #2563eb; font-weight: 800; }
+    
+    
+    
+    /* Custom Dark Terminal */
+    .terminal-box {
+        background-color: #0f172a;
+        color: #10b981;
+        font-family: 'Courier New', Courier, monospace;
+        padding: 15px;
+        border-radius: 8px;
+        height: 650px; 
+        overflow-y: auto;
+        white-space: pre-wrap;
+        border: 2px solid #334155;
+        font-size: 0.85rem;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -399,6 +413,15 @@ elif "Concept Drift Matrix" == page:
         .box-4 {{ border-color: {color_4}; box-shadow: 0 0 10px {color_4}40; }}
         .box-5 {{ border-color: {color_5}; box-shadow: 0 0 10px {color_5}40; }}
         .box-6 {{ border-color: {color_6}; box-shadow: 0 0 10px {color_6}40; }}
+
+        /* Force Native Streamlit Code Block to have a fixed height and scroll */
+        div[data-testid="stCodeBlock"] {{
+            max-height: 980px !important; 
+            overflow-y: auto !important;
+        }}
+        div[data-testid="stCodeBlock"] pre {{
+            max-height: 980px !important;
+        }}
         </style>
     """, unsafe_allow_html=True)
 
@@ -412,8 +435,11 @@ elif "Concept Drift Matrix" == page:
 
     with flow_col1:
         st.markdown(
-            f"<div class='flow-box box-1'>📊 1. Data Source<br><br><span style='font-size:0.8em; font-weight:normal;'>1047 Raw Stream</span></div>",
+            f"<div class='flow-box box-1'>📊 1. Data Source<br><br><span style='font-size:0.8em; font-weight:normal;'>Native or Custom CSV</span></div>",
             unsafe_allow_html=True)
+        uploaded_stream_csv = st.file_uploader("Upload Stream", type=['csv'],
+                                               disabled=(st.session_state.sim_phase != "init"),
+                                               label_visibility="collapsed")
     with flow_col2:
         st.markdown(
             f"<div class='flow-box box-2'>🔄 2. Stream<br><br><span style='font-size:0.8em; font-weight:normal;'>Math Drift Inject</span></div>",
@@ -456,11 +482,19 @@ elif "Concept Drift Matrix" == page:
     st.divider()
 
     # --- 4. THE COMMAND CENTER UI ---
+    # --- 4. THE COMMAND CENTER UI ---
     col_logs, col_graphs = st.columns([1, 2])
+
     with col_logs:
         st.markdown("### 🖥️ System Terminal")
-        log_box = st.empty()
+
+        # 1. Create a native scrolling container locked to exactly 1000 pixels
+        terminal_container = st.container(height=930)
+
+        # 2. Put the code box INSIDE the locked container
+        log_box = terminal_container.empty()
         log_box.code(st.session_state.terminal_text, language="bash")
+
     with col_graphs:
         st.markdown("### 📈 Live Telemetry Matrix")
         graph_box_1 = st.empty()
@@ -474,33 +508,41 @@ elif "Concept Drift Matrix" == page:
         st.rerun()
 
     if st.session_state.sim_phase == "streaming":
-        st.session_state.terminal_text = "> [SYSTEM] Initializing Data Pipeline...\n"
+        st.session_state.terminal_text += "\n> [SYSTEM] Initializing Data Pipeline...\n"
         try:
-            # 1. LOAD DATA
-            DEFAULT_DATA_PATH = r"C:\Users\priya\Desktop\PyCh_Pro\Churn_Analysis_and_Modelling\data\raw\stream_data.csv"
-            st.session_state.terminal_text += f"> [SYSTEM] Loading 1047-row native stream...\n"
-            log_box.code(st.session_state.terminal_text, language="bash")
+            # 1. LOAD DATA (CUSTOM OR NATIVE)
+            if uploaded_stream_csv is not None:
+                st.session_state.terminal_text += f"> [SYSTEM] Custom CSV detected. Validating schema...\n"
+                log_box.code(st.session_state.terminal_text, language="bash")
+                df = pd.read_csv(uploaded_stream_csv)
+                if len(df) < 300:
+                    st.error("Uploaded CSV is too small. Please provide at least 300 rows for stream simulation.")
+                    st.stop()
+            else:
+                DEFAULT_DATA_PATH = r"C:\Users\priya\Desktop\PyCh_Pro\Churn_Analysis_and_Modelling\data\raw\stream_data.csv"
+                st.session_state.terminal_text += f"> [SYSTEM] Loading native 1047-row stream...\n"
+                log_box.code(st.session_state.terminal_text, language="bash")
 
-            if not os.path.exists(DEFAULT_DATA_PATH):
-                st.error(f"CRITICAL ERROR: Cannot find '{DEFAULT_DATA_PATH}'.")
-                st.stop()
-            df = pd.read_csv(DEFAULT_DATA_PATH)
+                if not os.path.exists(DEFAULT_DATA_PATH):
+                    st.error(f"CRITICAL ERROR: Cannot find '{DEFAULT_DATA_PATH}'.")
+                    st.stop()
+                df = pd.read_csv(DEFAULT_DATA_PATH)
 
             if 'Churn' in df.columns:
                 df['Churn'] = df['Churn'].map({'Yes': 1, 'No': 0, 1: 1, 0: 0})
                 X_stream = df.drop('Churn', axis=1)
                 y_stream = df['Churn']
 
-                # Split: 750 rows for Degradation, 297 for Final Testing
-                X_phase1, y_phase1 = X_stream.iloc[:750], y_stream.iloc[:750]
-                X_phase2, y_phase2 = X_stream.iloc[750:], y_stream.iloc[750:]
+                split_idx = int(len(df) * 0.70)
+                X_phase1, y_phase1 = X_stream.iloc[:split_idx], y_stream.iloc[:split_idx]
+                X_phase2, y_phase2 = X_stream.iloc[split_idx:], y_stream.iloc[split_idx:]
             else:
-                st.error("Dataset must contain a 'Churn' column.")
+                st.error("Dataset must contain a 'Churn' column for SLA tracking.")
                 st.stop()
 
             # 2. LOAD PIPELINE
             PIPELINE_PATH = "production_pipeline.pkl"
-            st.session_state.terminal_text += f"> [SYSTEM] Loading pre-trained Master Pipeline (70% Base)...\n"
+            st.session_state.terminal_text += f"> [SYSTEM] Loading pre-trained Master Pipeline...\n"
             log_box.code(st.session_state.terminal_text, language="bash")
             champion = joblib.load(PIPELINE_PATH)
 
@@ -513,10 +555,20 @@ elif "Concept Drift Matrix" == page:
             drifted_X_history = []
             drift_detected = False
 
-            st.session_state.terminal_text += "> [WARNING] Injecting severe mathematical drift...\n"
+            st.session_state.terminal_text += "\n> [WARNING] Injecting sequential data batches...\n"
             log_box.code(st.session_state.terminal_text, language="bash")
 
+            # NARRATIVE INJECTIONS
+            narrative_events = {
+                3: "> [MARKET ALERT] Competitor announces aggressive 65% price slash targeting our premium segment.",
+                7: "> [ECONOMY ALERT] Macro-inflation detected. Customer price sensitivity at 12-month high.",
+                11: "> [SYSTEM WARNING] Anomalous behavior: Long-tenure customers exhibiting flight-risk traits."
+            }
+
             for i in range(15):
+                if i in narrative_events:
+                    st.session_state.terminal_text += f"\n{narrative_events[i]}\n"
+
                 current_batch_X = inject_systematic_drift(drift_batches_X[i], i, 15)
                 drifted_X_history.append(current_batch_X)
 
@@ -531,7 +583,7 @@ elif "Concept Drift Matrix" == page:
                 st.session_state.terminal_text += f"> [METRIC] {time_steps[-1]} | Champion Recall: {current_recall:.3f}\n"
 
                 if current_recall < 0.65 and not drift_detected:
-                    st.session_state.terminal_text += "\n> [CRITICAL] 🚨 SLA BREACH. Recall dropped below 0.65.\n> [CRITICAL] RETRAINING REQUIRED.\n"
+                    st.session_state.terminal_text += "\n> [CRITICAL] 🚨 SLA BREACH. Recall dropped below 0.65 threshold.\n> [CRITICAL] RETRAINING REQUIRED.\n\n"
                     drift_detected = True
 
                 log_box.code(st.session_state.terminal_text, language="bash")
@@ -543,7 +595,7 @@ elif "Concept Drift Matrix" == page:
                                    xaxis_title="Chronological Data Stream", yaxis_title="Recall Score",
                                    yaxis=dict(range=[0.0, 1.0]), height=300, margin=dict(l=0, r=0, t=40, b=0))
                 graph_box_1.plotly_chart(fig1, use_container_width=True)
-                time.sleep(0.3)
+                time.sleep(0.4)
 
             st.session_state.sim_phase = "drifted"
             st.session_state.fig1 = fig1
@@ -575,13 +627,10 @@ elif "Concept Drift Matrix" == page:
         champion = st.session_state.champion
         challenger = clone(champion)
 
-        # ==============================================================
-        # --- NEW: THE "WHOLE DATA + HIGH WEIGHT NEW DATA" STRATEGY ---
-        # ==============================================================
+        # THE "WHOLE DATA + HIGH WEIGHT NEW DATA" STRATEGY
         st.session_state.terminal_text += "> [SYSTEM] Fetching original 70% Base Data to prevent Catastrophic Forgetting...\n"
         log_box.code(st.session_state.terminal_text, language="bash")
 
-        # 🛑 THIS PATH MUST POINT TO THE FILE YOU CREATED IN STEP 1 🛑
         BASE_DATA_PATH = r"C:\Users\priya\Desktop\PyCh_Pro\Churn_Analysis_and_Modelling\data\raw\train_data.csv"
 
         if os.path.exists(BASE_DATA_PATH):
@@ -597,8 +646,6 @@ elif "Concept Drift Matrix" == page:
             st.session_state.terminal_text += "> [SYSTEM] Applying 3x weight multipliers to new drift telemetry...\n"
             log_box.code(st.session_state.terminal_text, language="bash")
 
-            # OVERSAMPLING: Duplicate the new data 3 times so the model focuses heavily on the new trend,
-            # while keeping 1 copy of the base data to remember the fundamentals.
             X_drift_heavy = pd.concat([st.session_state.X_phase1_drifted] * 3)
             y_drift_heavy = pd.concat([st.session_state.y_phase1] * 3)
 
@@ -608,9 +655,8 @@ elif "Concept Drift Matrix" == page:
             st.error(
                 f"⚠️ CRITICAL: Could not find {BASE_DATA_PATH}. Please ensure your 70% training data is exported there.")
             st.stop()
-        # ==============================================================
 
-        # --- REALISTIC TRAINING THEATER ---
+        # REALISTIC TRAINING THEATER
         st.session_state.terminal_text += "> [SYSTEM] Initiating Challenger Retraining Protocol...\n"
         log_box.code(st.session_state.terminal_text, language="bash")
 
@@ -628,12 +674,11 @@ elif "Concept Drift Matrix" == page:
             st.session_state.terminal_text += f"> [XGBoost] {step}\n"
             log_box.code(st.session_state.terminal_text, language="bash")
 
-        # Actually fit the model on the MASSIVE COMBINED DATASET
         challenger.fit(X_train_final, y_train_final)
         st.session_state.terminal_text += "> [SYSTEM] Challenger model compiled successfully.\n"
-        # ----------------------------------
+        log_box.code(st.session_state.terminal_text, language="bash")
 
-        st.session_state.terminal_text += "> [SYSTEM] Executing Dual-Stream Holdout Evaluation (297 rows)...\n"
+        st.session_state.terminal_text += "\n> [SYSTEM] Executing Dual-Stream Holdout Evaluation...\n"
         log_box.code(st.session_state.terminal_text, language="bash")
 
         test_batches_X = np.array_split(st.session_state.X_phase2, 10)
@@ -643,7 +688,6 @@ elif "Concept Drift Matrix" == page:
         challenger_history = []
         test_time_steps = []
 
-        # Dual-Stream Animation Loop
         for i in range(10):
             current_test_X = inject_systematic_drift(test_batches_X[i], 15, 15)
 
@@ -679,7 +723,7 @@ elif "Concept Drift Matrix" == page:
             graph_box_2.plotly_chart(fig2, use_container_width=True)
             time.sleep(0.4)
 
-        # --- CALCULATE DIFFERENCE & DECLARE WINNER ---
+        # CALCULATE DIFFERENCE & DECLARE WINNER
         avg_champ = np.mean(champ_history)
         avg_chall = np.mean(challenger_history)
         recall_diff = avg_chall - avg_champ
@@ -690,15 +734,15 @@ elif "Concept Drift Matrix" == page:
         if recall_diff > 0:
             st.session_state.terminal_text += f"> [DECISION] SUCCESS. Challenger dominates by +{recall_diff:.3f}. New weights approved.\n"
             result_text = f"🏆 CHALLENGER APPROVED<br><span style='font-size:12px'>(+{recall_diff:.3f} Recall Margin)</span>"
-            result_color = "#059669"  # Green
+            result_color = "#059669"
         else:
             st.session_state.terminal_text += "> [DECISION] WARNING. Challenger underperformed.\n"
             result_text = "⚠️ CHAMPION RETAINED<br><span style='font-size:12px'>(No Improvement)</span>"
-            result_color = "#dc2626"  # Red
+            result_color = "#dc2626"
 
         log_box.code(st.session_state.terminal_text, language="bash")
 
-        # --- GRAPH 3: The Difference Bar Chart & Declaration Box ---
+        # GRAPH 3: The Difference Bar Chart & Declaration Box
         fig3 = go.Figure()
         fig3.add_trace(go.Bar(
             x=['Champion (Degraded)', 'Challenger (Retrained)'],
