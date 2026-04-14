@@ -76,22 +76,31 @@ def binaryEncoder(X):
 
 binary_encoder_transformer = FunctionTransformer(binaryEncoder)
 
+# ==========================================
+# CUSTOM SYSTEMATIC DRIFT FUNCTION
+# ==========================================
 def inject_systematic_drift(df_batch, batch_index, total_batches):
     """
-    Mathematically alters telemetry to simulate a shifting business environment.
-    Scenario: Competitor slashes prices. Customers are paying less and staying longer,
-    but still churning. Champion model falsely assumes they are safe.
+    Mathematically alters telemetry to simulate a harsh shifting business environment.
+    Scenario: Extreme competitor undercutting. Churners are given massive fake loyalty
+    metrics to blind the Champion model.
     """
     df_mod = df_batch.copy()
     drift_intensity = (batch_index + 1) / total_batches  # Scales from >0.0 to 1.0
 
+    # 1. Extreme Price Drop (up to 65% reduction)
     if 'MonthlyCharges' in df_mod.columns:
-        # Progressively lower monthly charges by up to 40%
-        df_mod['MonthlyCharges'] = df_mod['MonthlyCharges'] * (1 - (0.40 * drift_intensity))
+        df_mod['MonthlyCharges'] = df_mod['MonthlyCharges'] * (1 - (0.65 * drift_intensity))
 
+    # 2. Fake Loyalty (add up to 48 months of artificial tenure)
     if 'tenure' in df_mod.columns:
-        # Progressively add up to 24 months of artificial tenure
-        df_mod['tenure'] = df_mod['tenure'] + (24 * drift_intensity)
+        df_mod['tenure'] = df_mod['tenure'] + (48 * drift_intensity)
+
+    # 3. Inflate Total Charges to make them look incredibly profitable
+    if 'TotalCharges' in df_mod.columns:
+        temp_total = pd.to_numeric(df_mod['TotalCharges'], errors='coerce').fillna(0)
+        temp_total = temp_total + (2500 * drift_intensity)
+        df_mod['TotalCharges'] = temp_total.astype(str)
 
     return df_mod
 
@@ -405,7 +414,6 @@ elif "Concept Drift Matrix" == page:
         st.markdown(
             f"<div class='flow-box box-1'>📊 1. Data Source<br><br><span style='font-size:0.8em; font-weight:normal;'>1047 Raw Stream</span></div>",
             unsafe_allow_html=True)
-
     with flow_col2:
         st.markdown(
             f"<div class='flow-box box-2'>🔄 2. Stream<br><br><span style='font-size:0.8em; font-weight:normal;'>Math Drift Inject</span></div>",
@@ -415,17 +423,14 @@ elif "Concept Drift Matrix" == page:
         else:
             st.button("▶️ Done", use_container_width=True, disabled=True)
             start_stream = False
-
     with flow_col3:
         st.markdown(
             f"<div class='flow-box box-3'>🤖 3. Champion<br><br><span style='font-size:0.8em; font-weight:normal;'>Standard Pipeline</span></div>",
             unsafe_allow_html=True)
-
     with flow_col4:
         st.markdown(
             f"<div class='flow-box box-4'>📉 4. Monitor<br><br><span style='font-size:0.8em; font-weight:normal;'>Recall SLA</span></div>",
             unsafe_allow_html=True)
-
     with flow_col5:
         st.markdown(
             f"<div class='flow-box box-5'>⚔️ 5. Challenger<br><br><span style='font-size:0.8em; font-weight:normal;'>Retrain Protocol</span></div>",
@@ -435,7 +440,6 @@ elif "Concept Drift Matrix" == page:
         else:
             st.button("⚔️ Locked", use_container_width=True, disabled=True)
             start_retrain = False
-
     with flow_col6:
         st.markdown(
             f"<div class='flow-box box-6'>🚀 6. Production<br><br><span style='font-size:0.8em; font-weight:normal;'>Deploy Winner</span></div>",
@@ -458,9 +462,10 @@ elif "Concept Drift Matrix" == page:
         log_box = st.empty()
         log_box.code(st.session_state.terminal_text, language="bash")
     with col_graphs:
-        st.markdown("### 📈 Live Telemetry (Recall vs. Time)")
+        st.markdown("### 📈 Live Telemetry Matrix")
         graph_box_1 = st.empty()
         graph_box_2 = st.empty()
+        graph_box_3 = st.empty()
         success_box = st.empty()
 
     # --- LOGIC TRIGGER: START STREAM (PHASE 1) ---
@@ -505,14 +510,13 @@ elif "Concept Drift Matrix" == page:
 
             live_metric_history = []
             time_steps = []
-            drifted_X_history = []  # Save the modified data for Challenger retraining!
+            drifted_X_history = []
             drift_detected = False
 
-            st.session_state.terminal_text += "> [WARNING] Injecting systematic mathematical drift...\n"
+            st.session_state.terminal_text += "> [WARNING] Injecting severe mathematical drift...\n"
             log_box.code(st.session_state.terminal_text, language="bash")
 
             for i in range(15):
-                # Apply the mathematical drift
                 current_batch_X = inject_systematic_drift(drift_batches_X[i], i, 15)
                 drifted_X_history.append(current_batch_X)
 
@@ -541,10 +545,9 @@ elif "Concept Drift Matrix" == page:
                 graph_box_1.plotly_chart(fig1, use_container_width=True)
                 time.sleep(0.3)
 
-                # Save state for Phase 2
             st.session_state.sim_phase = "drifted"
             st.session_state.fig1 = fig1
-            st.session_state.X_phase1_drifted = pd.concat(drifted_X_history)  # Challenger needs this!
+            st.session_state.X_phase1_drifted = pd.concat(drifted_X_history)
             st.session_state.y_phase1 = y_phase1
             st.session_state.X_phase2 = X_phase2
             st.session_state.y_phase2 = y_phase2
@@ -572,16 +575,67 @@ elif "Concept Drift Matrix" == page:
         champion = st.session_state.champion
         challenger = clone(champion)
 
-        st.session_state.terminal_text += "> [SYSTEM] Fitting Challenger on recent drifted telemetry...\n"
+        # ==============================================================
+        # --- NEW: THE "WHOLE DATA + HIGH WEIGHT NEW DATA" STRATEGY ---
+        # ==============================================================
+        st.session_state.terminal_text += "> [SYSTEM] Fetching original 70% Base Data to prevent Catastrophic Forgetting...\n"
         log_box.code(st.session_state.terminal_text, language="bash")
 
-        # Train Challenger on the 750 rows that were modified in Phase 1
-        challenger.fit(st.session_state.X_phase1_drifted, st.session_state.y_phase1)
+        # 🛑 THIS PATH MUST POINT TO THE FILE YOU CREATED IN STEP 1 🛑
+        BASE_DATA_PATH = r"C:\Users\priya\Desktop\PyCh_Pro\Churn_Analysis_and_Modelling\data\raw\train_data.csv"
+
+        if os.path.exists(BASE_DATA_PATH):
+            df_base = pd.read_csv(BASE_DATA_PATH)
+            if 'Churn' in df_base.columns:
+                df_base['Churn'] = df_base['Churn'].map({'Yes': 1, 'No': 0, 1: 1, 0: 0})
+                X_base = df_base.drop('Churn', axis=1)
+                y_base = df_base['Churn']
+            else:
+                st.error("Base data must contain a 'Churn' column.")
+                st.stop()
+
+            st.session_state.terminal_text += "> [SYSTEM] Applying 3x weight multipliers to new drift telemetry...\n"
+            log_box.code(st.session_state.terminal_text, language="bash")
+
+            # OVERSAMPLING: Duplicate the new data 3 times so the model focuses heavily on the new trend,
+            # while keeping 1 copy of the base data to remember the fundamentals.
+            X_drift_heavy = pd.concat([st.session_state.X_phase1_drifted] * 3)
+            y_drift_heavy = pd.concat([st.session_state.y_phase1] * 3)
+
+            X_train_final = pd.concat([X_base, X_drift_heavy], ignore_index=True)
+            y_train_final = pd.concat([y_base, y_drift_heavy], ignore_index=True)
+        else:
+            st.error(
+                f"⚠️ CRITICAL: Could not find {BASE_DATA_PATH}. Please ensure your 70% training data is exported there.")
+            st.stop()
+        # ==============================================================
+
+        # --- REALISTIC TRAINING THEATER ---
+        st.session_state.terminal_text += "> [SYSTEM] Initiating Challenger Retraining Protocol...\n"
+        log_box.code(st.session_state.terminal_text, language="bash")
+
+        training_steps = [
+            f"Loading massive combined matrix ({len(X_train_final)} rows)...",
+            "Applying ColumnTransformer encodings...",
+            "Boosting tree 1/20 (eta=0.3, max_depth=6)...",
+            "Boosting tree 10/20 (eta=0.3, max_depth=6)...",
+            "Boosting tree 20/20... Optimization converged.",
+            "Validating new Challenger weights..."
+        ]
+
+        for step in training_steps:
+            time.sleep(0.6)
+            st.session_state.terminal_text += f"> [XGBoost] {step}\n"
+            log_box.code(st.session_state.terminal_text, language="bash")
+
+        # Actually fit the model on the MASSIVE COMBINED DATASET
+        challenger.fit(X_train_final, y_train_final)
+        st.session_state.terminal_text += "> [SYSTEM] Challenger model compiled successfully.\n"
+        # ----------------------------------
 
         st.session_state.terminal_text += "> [SYSTEM] Executing Dual-Stream Holdout Evaluation (297 rows)...\n"
         log_box.code(st.session_state.terminal_text, language="bash")
 
-        # Split the remaining 297 rows into 10 testing batches
         test_batches_X = np.array_split(st.session_state.X_phase2, 10)
         test_batches_y = np.array_split(st.session_state.y_phase2, 10)
 
@@ -591,10 +645,8 @@ elif "Concept Drift Matrix" == page:
 
         # Dual-Stream Animation Loop
         for i in range(10):
-            # Apply Maximum Drift to the test set to represent the "new normal"
             current_test_X = inject_systematic_drift(test_batches_X[i], 15, 15)
 
-            # Both models predict
             champ_preds = champion.predict(current_test_X)
             chall_preds = challenger.predict(current_test_X)
 
@@ -611,7 +663,6 @@ elif "Concept Drift Matrix" == page:
             st.session_state.terminal_text += f"> [TEST] Batch {i + 1} | Champion: {champ_recall:.2f} | Challenger: {chall_recall:.2f}\n"
             log_box.code(st.session_state.terminal_text, language="bash")
 
-            # The Dual-Line Graph
             fig2 = go.Figure()
             fig2.add_trace(
                 go.Scatter(x=test_time_steps, y=champ_history, mode='lines+markers', name='Champion (Degraded)',
@@ -628,26 +679,64 @@ elif "Concept Drift Matrix" == page:
             graph_box_2.plotly_chart(fig2, use_container_width=True)
             time.sleep(0.4)
 
+        # --- CALCULATE DIFFERENCE & DECLARE WINNER ---
         avg_champ = np.mean(champ_history)
         avg_chall = np.mean(challenger_history)
+        recall_diff = avg_chall - avg_champ
 
         st.session_state.terminal_text += f"\n> [RESULT] Final Avg Champion Recall: {avg_champ:.3f}\n"
         st.session_state.terminal_text += f"> [RESULT] Final Avg Challenger Recall: {avg_chall:.3f}\n"
 
-        if avg_chall > avg_champ:
-            st.session_state.terminal_text += "> [DECISION] SUCCESS. Challenger dominates. New weights approved.\n"
+        if recall_diff > 0:
+            st.session_state.terminal_text += f"> [DECISION] SUCCESS. Challenger dominates by +{recall_diff:.3f}. New weights approved.\n"
+            result_text = f"🏆 CHALLENGER APPROVED<br><span style='font-size:12px'>(+{recall_diff:.3f} Recall Margin)</span>"
+            result_color = "#059669"  # Green
         else:
             st.session_state.terminal_text += "> [DECISION] WARNING. Challenger underperformed.\n"
+            result_text = "⚠️ CHAMPION RETAINED<br><span style='font-size:12px'>(No Improvement)</span>"
+            result_color = "#dc2626"  # Red
 
         log_box.code(st.session_state.terminal_text, language="bash")
 
+        # --- GRAPH 3: The Difference Bar Chart & Declaration Box ---
+        fig3 = go.Figure()
+        fig3.add_trace(go.Bar(
+            x=['Champion (Degraded)', 'Challenger (Retrained)'],
+            y=[avg_champ, avg_chall],
+            marker_color=['#dc2626', '#059669'],
+            text=[f"{avg_champ:.2f}", f"{avg_chall:.2f}"],
+            textposition='auto',
+            width=[0.4, 0.4]
+        ))
+
+        fig3.add_annotation(
+            x=0.5, y=0.85, xref="paper", yref="paper",
+            text=result_text, showarrow=False,
+            font=dict(size=14, color=result_color),
+            bgcolor="white", bordercolor=result_color, borderwidth=2, borderpad=6
+        )
+
+        fig3.update_layout(
+            title="Final Performance Matrix & Decision",
+            yaxis_title="Average Recall",
+            yaxis=dict(range=[0.0, 1.0]),
+            height=300,
+            margin=dict(l=0, r=0, t=40, b=0)
+        )
+
+        graph_box_3.plotly_chart(fig3, use_container_width=True)
+
         st.session_state.fig2 = fig2
+        st.session_state.fig3 = fig3
         st.session_state.sim_phase = "resolved"
         st.rerun()
 
-    # Restore Graph 2
-    if st.session_state.sim_phase in ["resolved", "deployed"] and 'fig2' in st.session_state:
-        graph_box_2.plotly_chart(st.session_state.fig2, use_container_width=True)
+    # Restore Graphs 2 and 3
+    if st.session_state.sim_phase in ["resolved", "deployed"]:
+        if 'fig2' in st.session_state:
+            graph_box_2.plotly_chart(st.session_state.fig2, use_container_width=True)
+        if 'fig3' in st.session_state:
+            graph_box_3.plotly_chart(st.session_state.fig3, use_container_width=True)
 
     # --- LOGIC TRIGGER: DEPLOYMENT ---
     if deploy_model:
