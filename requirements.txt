@@ -1,0 +1,16 @@
+# --- Backend (FastAPI) ---
+fastapi
+uvicorn
+pydantic
+joblib
+
+# --- Frontend (Streamlit) ---
+streamlit
+requests
+plotly
+
+# --- Machine Learning Stack ---
+pandas
+numpy
+scikit-learn
+xgboost
