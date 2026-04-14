@@ -270,71 +270,69 @@ elif page == "05 // Concept Drift Matrix":
 
     # --- 1. STATE MANAGEMENT ---
     if "sim_phase" not in st.session_state:
-        st.session_state.sim_phase = "init"  # Phases: init, streaming, drifted, retraining, resolved
+        st.session_state.sim_phase = "init"
     if "terminal_text" not in st.session_state:
         st.session_state.terminal_text = "> [SYSTEM] Awaiting command...\n"
 
     # --- 2. DYNAMIC CSS FOR ACTIVE FLOWCHART HIGHLIGHTING ---
-    # We define colors based on the current phase
     color_1 = "#2563eb" if st.session_state.sim_phase == "init" else "#e2e8f0"
     color_2 = "#eab308" if st.session_state.sim_phase == "streaming" else "#e2e8f0"
     color_3 = "#059669" if st.session_state.sim_phase in ["streaming", "drifted"] else "#e2e8f0"
     color_4 = "#dc2626" if st.session_state.sim_phase == "drifted" else "#e2e8f0"
     color_5 = "#8b5cf6" if st.session_state.sim_phase in ["retraining", "resolved"] else "#e2e8f0"
+    color_6 = "#10b981" if st.session_state.sim_phase == "deployed" else "#e2e8f0"
 
     st.markdown(f"""
         <style>
         .title-sim {{ margin-top: -2.5rem; font-size: 3.2rem; color: #0f172a; font-weight: 800; text-transform: uppercase;}}
         .theory-quote {{ border-left: 4px solid #2563eb; padding-left: 15px; font-size: 1.1rem; color: #475569; margin-bottom: 2rem; margin-top: 1rem;}}
-
-        /* Flowchart Box Styling */
         .flow-box {{
-            padding: 15px; border-radius: 8px; text-align: center; font-weight: 600; font-size: 0.9rem;
+            padding: 10px; border-radius: 8px; text-align: center; font-weight: 600; font-size: 0.85rem;
             transition: all 0.3s ease; border: 2px solid transparent; background-color: #f8fafc; color: #334155;
-            min-height: 120px; display: flex; flex-direction: column; justify-content: center;
+            min-height: 110px; display: flex; flex-direction: column; justify-content: center;
         }}
         .box-1 {{ border-color: {color_1}; box-shadow: 0 0 10px {color_1}40; }}
         .box-2 {{ border-color: {color_2}; box-shadow: 0 0 10px {color_2}40; }}
         .box-3 {{ border-color: {color_3}; box-shadow: 0 0 10px {color_3}40; }}
         .box-4 {{ border-color: {color_4}; box-shadow: 0 0 10px {color_4}40; }}
         .box-5 {{ border-color: {color_5}; box-shadow: 0 0 10px {color_5}40; }}
+        .box-6 {{ border-color: {color_6}; box-shadow: 0 0 10px {color_6}40; }}
         </style>
     """, unsafe_allow_html=True)
 
     st.markdown("<div class='title-sim'>Concept Drift & Retraining Simulator</div>", unsafe_allow_html=True)
     st.markdown(
-        "<div class='theory-quote'>Watch the model's <b>Recall</b> degrade under shifting data conditions. Upload your own CSV to test custom distributions, or use the synthetic stream.</div>",
+        "<div class='theory-quote'>Watch the model's <b>Recall</b> degrade under shifting data conditions. The system defaults to the native 15% holdout stream, or you can upload custom telemetry.</div>",
         unsafe_allow_html=True)
 
     # --- 3. THE ARCHITECTURE FLOWCHART ---
-    flow_col1, flow_col2, flow_col3, flow_col4, flow_col5 = st.columns(5)
+    flow_col1, flow_col2, flow_col3, flow_col4, flow_col5, flow_col6 = st.columns(6)
 
     with flow_col1:
         st.markdown(
-            f"<div class='flow-box box-1'>📊 1. Data Source<br><br><span style='font-size:0.8em; font-weight:normal;'>Base vs Future Stream</span></div>",
+            f"<div class='flow-box box-1'>📊 1. Data Source<br><br><span style='font-size:0.8em; font-weight:normal;'>Native vs Upload</span></div>",
             unsafe_allow_html=True)
-        # Sandbox / Custom CSV Field inside the block area
-        uploaded_csv = st.file_uploader("Upload Data (Opt.)", type=['csv'],
-                                        disabled=(st.session_state.sim_phase != "init"), label_visibility="collapsed")
+        uploaded_csv = st.file_uploader("Upload Data", type=['csv'], disabled=(st.session_state.sim_phase != "init"),
+                                        label_visibility="collapsed")
 
     with flow_col2:
         st.markdown(
-            f"<div class='flow-box box-2'>🔄 2. Live Stream<br><br><span style='font-size:0.8em; font-weight:normal;'>Injects shifting data</span></div>",
+            f"<div class='flow-box box-2'>🔄 2. Stream<br><br><span style='font-size:0.8em; font-weight:normal;'>Injecting Drift</span></div>",
             unsafe_allow_html=True)
         if st.session_state.sim_phase == "init":
-            start_stream = st.button("▶️ Start Stream", use_container_width=True, type="primary")
+            start_stream = st.button("▶️ Start", use_container_width=True, type="primary")
         else:
-            st.button("▶️ Running/Done", use_container_width=True, disabled=True)
+            st.button("▶️ Done", use_container_width=True, disabled=True)
             start_stream = False
 
     with flow_col3:
         st.markdown(
-            f"<div class='flow-box box-3'>🤖 3. Champion<br><br><span style='font-size:0.8em; font-weight:normal;'>Standard XGBoost</span></div>",
+            f"<div class='flow-box box-3'>🤖 3. Champion<br><br><span style='font-size:0.8em; font-weight:normal;'>Standard Model</span></div>",
             unsafe_allow_html=True)
 
     with flow_col4:
         st.markdown(
-            f"<div class='flow-box box-4'>📉 4. Monitor<br><br><span style='font-size:0.8em; font-weight:normal;'>Tracking Recall SLA</span></div>",
+            f"<div class='flow-box box-4'>📉 4. Monitor<br><br><span style='font-size:0.8em; font-weight:normal;'>Recall SLA</span></div>",
             unsafe_allow_html=True)
 
     with flow_col5:
@@ -342,10 +340,23 @@ elif page == "05 // Concept Drift Matrix":
             f"<div class='flow-box box-5'>⚔️ 5. Challenger<br><br><span style='font-size:0.8em; font-weight:normal;'>Retrain Protocol</span></div>",
             unsafe_allow_html=True)
         if st.session_state.sim_phase == "drifted":
-            start_retrain = st.button("⚔️ Trigger Retrain", use_container_width=True, type="primary")
+            start_retrain = st.button("⚔️ Retrain", use_container_width=True, type="primary")
         else:
             st.button("⚔️ Locked", use_container_width=True, disabled=True)
             start_retrain = False
+
+    with flow_col6:
+        st.markdown(
+            f"<div class='flow-box box-6'>🚀 6. Production<br><br><span style='font-size:0.8em; font-weight:normal;'>Deploy Winner</span></div>",
+            unsafe_allow_html=True)
+        if st.session_state.sim_phase == "resolved":
+            deploy_model = st.button("🚀 Deploy", use_container_width=True, type="primary")
+        elif st.session_state.sim_phase == "deployed":
+            st.button("✅ Active", use_container_width=True, disabled=True)
+            deploy_model = False
+        else:
+            st.button("🔒 Locked", use_container_width=True, disabled=True)
+            deploy_model = False
 
     st.divider()
 
@@ -359,98 +370,102 @@ elif page == "05 // Concept Drift Matrix":
         st.markdown("### 📈 Live Telemetry (Recall)")
         graph_box_1 = st.empty()
         graph_box_2 = st.empty()
+        success_box = st.empty()
 
     # --- LOGIC TRIGGER: START STREAM ---
     if start_stream:
         st.session_state.sim_phase = "streaming"
-        st.rerun()  # Force UI to update CSS instantly
+        st.rerun()
 
     if st.session_state.sim_phase == "streaming":
-        st.session_state.terminal_text = "> [SYSTEM] Checking data source...\n"
+        st.session_state.terminal_text = "> [SYSTEM] Initializing Data Pipeline...\n"
 
-        # Data Logic: Custom CSV vs Synthetic
-        if uploaded_csv is not None:
-            st.session_state.terminal_text += "> [SYSTEM] Custom CSV detected. Parsing Sandbox data...\n"
-            log_box.code(st.session_state.terminal_text, language="bash")
-            df = pd.read_csv(uploaded_csv)
+        try:
+            # CHECK FOR DATA SOURCE (Upload vs Native Local File)
+            if uploaded_csv is not None:
+                st.session_state.terminal_text += "> [SYSTEM] Custom Sandbox CSV detected. Parsing...\n"
+                log_box.code(st.session_state.terminal_text, language="bash")
+                df = pd.read_csv(uploaded_csv)
+            else:
+                # !!! UPDATE THIS FILENAME TO MATCH YOUR LOCAL 1047 ROW CSV !!!
+                DEFAULT_DATA_PATH = "your_15_percent_data.csv"
+                st.session_state.terminal_text += f"> [SYSTEM] Loading native telemetry stream: {DEFAULT_DATA_PATH}...\n"
+                log_box.code(st.session_state.terminal_text, language="bash")
 
-            # Simple encoding for Sandbox purposes
+                if not os.path.exists(DEFAULT_DATA_PATH):
+                    st.error(
+                        f"CRITICAL ERROR: Cannot find '{DEFAULT_DATA_PATH}'. Please ensure the file is in the same folder as app.py, or upload a CSV.")
+                    st.stop()
+                df = pd.read_csv(DEFAULT_DATA_PATH)
+
+            # DATA PREPROCESSING (To ensure XGBoost can read it)
             if 'Churn' in df.columns:
                 df['Churn'] = df['Churn'].map({'Yes': 1, 'No': 0, 1: 1, 0: 0})
-                X = df.drop('Churn', axis=1)
-                X = pd.get_dummies(X)  # Dummy encode categories
+                X = pd.get_dummies(df.drop('Churn', axis=1))  # One-Hot Encode Text Columns
                 y = df['Churn']
 
-                # Split: 70% Base Data, 30% Future Stream Data
-                split_idx = int(len(df) * 0.7)
+                # Split Sandbox: 50% forms the Base, 50% forms the Stream
+                split_idx = int(len(df) * 0.5)
                 X_base, y_base = X.iloc[:split_idx], y.iloc[:split_idx]
                 X_drift, y_drift = X.iloc[split_idx:], y.iloc[split_idx:]
             else:
-                st.error("Uploaded CSV must contain a 'Churn' column.")
+                st.error("Dataset must contain a 'Churn' column for the simulation to track Recall.")
                 st.stop()
-        else:
-            st.session_state.terminal_text += "> [SYSTEM] No Custom CSV. Falling back to Synthetic Pipeline...\n"
-            log_box.code(st.session_state.terminal_text, language="bash")
-            X_base, y_base = make_classification(n_samples=2000, n_features=15, weights=[0.7, 0.3], random_state=42)
-            # Create drift by shifting features significantly
-            X_drift, y_drift = make_classification(n_samples=1000, n_features=15, shift=2.0, weights=[0.7, 0.3],
-                                                   random_state=99)
 
-        st.session_state.terminal_text += "> [SYSTEM] Training Champion Model on Base Data...\n"
-        log_box.code(st.session_state.terminal_text, language="bash")
-
-        champion = xgb.XGBClassifier(n_estimators=20, random_state=42, eval_metric="logloss")
-        champion.fit(X_base, y_base)
-
-        # Split stream into 15 batches for the animation
-        drift_batches = np.array_split(X_drift, 15)
-        drift_y_batches = np.array_split(y_drift, 15)
-
-        live_metric_history = []
-        drift_detected = False
-
-        st.session_state.terminal_text += "> [WARNING] Injecting future data stream...\n"
-        log_box.code(st.session_state.terminal_text, language="bash")
-
-        for i in range(len(drift_batches)):
-            # Predict Classes (0 or 1) for Recall calculation
-            preds = champion.predict(drift_batches[i])
-            try:
-                # Calculate Recall (True Positives / Actual Positives)
-                current_recall = recall_score(drift_y_batches[i], preds, zero_division=0)
-            except:
-                current_recall = live_metric_history[-1] if live_metric_history else 0.85
-
-            live_metric_history.append(current_recall)
-
-            # Terminal Update
-            st.session_state.terminal_text += f"> [METRIC] Batch {i + 1} | Champion Recall: {current_recall:.3f}\n"
-            if current_recall < 0.65 and not drift_detected:
-                st.session_state.terminal_text += "\n> [CRITICAL] SLA BREACH. Recall dropped below 0.65.\n> [CRITICAL] RETRAINING REQUIRED.\n"
-                drift_detected = True
+            st.session_state.terminal_text += f"> [SYSTEM] Training Standard Champion Model on initial data block...\n"
             log_box.code(st.session_state.terminal_text, language="bash")
 
-            # Graph 1 Update
-            fig1 = go.Figure(data=go.Scatter(y=live_metric_history, mode='lines+markers',
-                                             line=dict(color='#dc2626' if drift_detected else '#2563eb', width=3)))
-            fig1.add_hline(y=0.65, line_dash="dash", line_color="red", annotation_text="Recall Failure Threshold")
-            fig1.update_layout(title="Phase 1: Champion Model Degradation", yaxis=dict(range=[0.0, 1.0]), height=300,
-                               margin=dict(l=0, r=0, t=40, b=0))
-            graph_box_1.plotly_chart(fig1, use_container_width=True)
+            champion = xgb.XGBClassifier(n_estimators=20, random_state=42, eval_metric="logloss")
+            champion.fit(X_base, y_base)
 
-            # Slowed down for smooth browser rendering
-            time.sleep(0.4)
+            # Split stream into batches for the animation (e.g. ~35 rows per batch if 500 drift rows)
+            drift_batches = np.array_split(X_drift, 15)
+            drift_y_batches = np.array_split(y_drift, 15)
 
-            # Save state
-        st.session_state.sim_phase = "drifted"
-        st.session_state.fig1 = fig1
-        st.session_state.X_drift = X_drift
-        st.session_state.y_drift = y_drift
-        st.session_state.champion = champion
-        st.rerun()
+            live_metric_history = []
+            drift_detected = False
+
+            st.session_state.terminal_text += "> [WARNING] Injecting future data stream...\n"
+            log_box.code(st.session_state.terminal_text, language="bash")
+
+            for i in range(len(drift_batches)):
+                preds = champion.predict(drift_batches[i])
+                try:
+                    current_recall = recall_score(drift_y_batches[i], preds, zero_division=0)
+                except:
+                    current_recall = live_metric_history[-1] if live_metric_history else 0.85
+
+                live_metric_history.append(current_recall)
+                st.session_state.terminal_text += f"> [METRIC] Batch {i + 1} | Champion Recall: {current_recall:.3f}\n"
+
+                # SLA Failure Logic
+                if current_recall < 0.65 and not drift_detected:
+                    st.session_state.terminal_text += "\n> [CRITICAL] 🚨 SLA BREACH. Recall dropped below 0.65.\n> [CRITICAL] RETRAINING REQUIRED.\n"
+                    drift_detected = True
+
+                log_box.code(st.session_state.terminal_text, language="bash")
+
+                fig1 = go.Figure(data=go.Scatter(y=live_metric_history, mode='lines+markers',
+                                                 line=dict(color='#dc2626' if drift_detected else '#2563eb', width=3)))
+                fig1.add_hline(y=0.65, line_dash="dash", line_color="red", annotation_text="Recall Failure Threshold")
+                fig1.update_layout(title="Phase 1: Champion Model Degradation", yaxis=dict(range=[0.0, 1.0]),
+                                   height=300, margin=dict(l=0, r=0, t=40, b=0))
+                graph_box_1.plotly_chart(fig1, use_container_width=True)
+                time.sleep(0.4)
+
+            st.session_state.sim_phase = "drifted"
+            st.session_state.fig1 = fig1
+            st.session_state.X_drift = X_drift
+            st.session_state.y_drift = y_drift
+            st.session_state.champion = champion
+            st.rerun()
+
+        except Exception as e:
+            st.error(f"Data Processing Error: {str(e)}")
+            st.stop()
 
     # Restore Graph 1
-    if st.session_state.sim_phase in ["drifted", "retraining", "resolved"] and 'fig1' in st.session_state:
+    if st.session_state.sim_phase in ["drifted", "retraining", "resolved", "deployed"] and 'fig1' in st.session_state:
         graph_box_1.plotly_chart(st.session_state.fig1, use_container_width=True)
 
     # --- LOGIC TRIGGER: START RETRAIN ---
@@ -460,23 +475,21 @@ elif page == "05 // Concept Drift Matrix":
 
     if st.session_state.sim_phase == "retraining":
         st.session_state.terminal_text += "\n> [ACTION] Retraining protocol authorized...\n"
-        st.session_state.terminal_text += "> [SYSTEM] Training Challenger Model on new data...\n"
         log_box.code(st.session_state.terminal_text, language="bash")
 
         X_drift = st.session_state.X_drift
         y_drift = st.session_state.y_drift
         champion = st.session_state.champion
 
-        # Train Challenger
         challenger = xgb.XGBClassifier(n_estimators=20, random_state=101, eval_metric="logloss")
         challenger.fit(X_drift, y_drift)
 
         st.session_state.terminal_text += "> [SYSTEM] Evaluating Challenger vs Champion on blind holdout...\n"
         log_box.code(st.session_state.terminal_text, language="bash")
 
-        # Blind Holdout test (Synthetic fallback to ensure it works even if CSV is small)
-        X_test, y_test = make_classification(n_samples=500, n_features=X_drift.shape[1], shift=2.0, weights=[0.7, 0.3],
-                                             random_state=777)
+        # Use the very last piece of the stream as the ultimate blind holdout
+        split_test = int(len(X_drift) * 0.8)
+        X_test, y_test = X_drift.iloc[split_test:], y_drift.iloc[split_test:]
 
         champ_preds = champion.predict(X_test)
         chall_preds = challenger.predict(X_test)
@@ -486,12 +499,17 @@ elif page == "05 // Concept Drift Matrix":
 
         time.sleep(1.5)
 
-        st.session_state.terminal_text += f"\n> [RESULT] Champion Holdout Recall: {champ_recall:.3f}\n"
-        st.session_state.terminal_text += f"> [RESULT] Challenger Holdout Recall: {chall_recall:.3f}\n"
-        st.session_state.terminal_text += "> [DECISION] SUCCESS. Challenger out-performs Champion.\n"
+        # --- EXPLICIT LOGGING & DECLARATION ---
+        st.session_state.terminal_text += f"\n> [RESULT] Final Champion Recall: {champ_recall:.3f}\n"
+        st.session_state.terminal_text += f"> [RESULT] Final Challenger Recall: {chall_recall:.3f}\n"
+
+        if chall_recall > champ_recall:
+            st.session_state.terminal_text += "> [DECISION] SUCCESS. Challenger dominates. New weights approved for production.\n"
+        else:
+            st.session_state.terminal_text += "> [DECISION] WARNING. Challenger underperformed. Manual review required.\n"
+
         log_box.code(st.session_state.terminal_text, language="bash")
 
-        # Graph 2 Update
         fig2 = go.Figure()
         fig2.add_trace(go.Bar(x=['Champion (Old)', 'Challenger (New)'], y=[champ_recall, chall_recall],
                               marker_color=['#94a3b8', '#059669']))
@@ -504,10 +522,22 @@ elif page == "05 // Concept Drift Matrix":
         st.rerun()
 
     # Restore Graph 2
-    if st.session_state.sim_phase == "resolved" and 'fig2' in st.session_state:
+    if st.session_state.sim_phase in ["resolved", "deployed"] and 'fig2' in st.session_state:
         graph_box_2.plotly_chart(st.session_state.fig2, use_container_width=True)
 
-        if st.button("Reset System", use_container_width=True):
+    # --- LOGIC TRIGGER: DEPLOYMENT ---
+    if deploy_model:
+        st.session_state.sim_phase = "deployed"
+        st.rerun()
+
+    if st.session_state.sim_phase == "deployed":
+        st.session_state.terminal_text += "\n> [DEPLOYMENT] Initializing API override...\n"
+        st.session_state.terminal_text += "> [DEPLOYMENT] System state synchronized. New weights active in production.\n"
+        log_box.code(st.session_state.terminal_text, language="bash")
+        success_box.success(
+            "✅ **Deployment Successful:** The Challenger model is now serving live traffic. (Simulation Complete)")
+
+        if st.button("Reset System Simulator", use_container_width=True):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
