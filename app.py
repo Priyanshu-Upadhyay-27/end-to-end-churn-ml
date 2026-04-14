@@ -11,6 +11,8 @@ from sklearn.base import clone
 from sklearn.datasets import make_classification
 from sklearn.metrics import recall_score, roc_auc_score
 
+
+
 ########################Custom Functions for app.py#####################
 from sklearn.preprocessing import FunctionTransformer
 
@@ -94,24 +96,24 @@ def inject_systematic_drift(df_batch, batch_index, total_batches):
     return df_mod
 
 
-# --- CONFIGURATION & ENTERPRISE CLEAN CSS ---
-st.set_page_config(page_title="Retention Intelligence", page_icon="📊", layout="wide")
+#--- CONFIGURATION & ENTERPRISE CLEAN CSS ---
+st.set_page_config(page_title="Retention Intelligence", page_icon="📊", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
-    /* Hide the Streamlit top header */
-    [data-testid="stHeader"] { display: none; }
+    /* NOTE: We have completely removed the code that hides the header. 
+       The native Streamlit navigation button will now appear normally. */
 
-    /* Main Background & Text (Light Mode) */
+    /* Main Background & Text */
     .stApp { background-color: #f4f6f9; color: #334155; font-family: 'Inter', sans-serif; }
 
-    /* Headings (Deep Slate) */
+    /* Headings */
     h1, h2, h3 { color: #0f172a !important; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; }
     h1 { margin-top: 0rem !important; padding-top: 0rem !important; font-size: 3.5rem; }
 
     /* Clean Enterprise Accents */
-    .neon-red { color: #dc2626; font-weight: bold; font-size: 1.2rem; } /* Brick Red */
-    .neon-green { color: #059669; font-weight: bold; font-size: 1.2rem; } /* Emerald Green */
+    .neon-red { color: #dc2626; font-weight: bold; font-size: 1.2rem; } 
+    .neon-green { color: #059669; font-weight: bold; font-size: 1.2rem; } 
 
     /* Subheaders */
     .cyber-sub { border-left: 4px solid #2563eb; padding-left: 10px; margin-bottom: 20px; color: #475569; }
@@ -120,11 +122,8 @@ st.markdown("""
     [data-testid="stSidebar"] { background-color: #ffffff; border-right: 1px solid #e2e8f0; }
     [data-testid="stSidebar"] .stRadio p { color: #1e293b !important; font-weight: 600; font-size: 1.1rem !important; margin-bottom: 8px;}
 
-    /* Metrics Numbers (Cobalt Blue) */
+    /* Metrics Numbers */
     [data-testid="stMetricValue"] { color: #2563eb; font-weight: 800; }
-
-    /* Toggle Button Styling */
-    div[role="radiogroup"] { padding-bottom: 20px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -177,17 +176,26 @@ def render_input_form(key_prefix):
 # --- SIDEBAR NAVIGATION ---
 st.sidebar.title("System // Menu")
 page = st.sidebar.radio("Navigation", [
-    "01 // Introduction",
-    "02 // Business Strategy (Recall@20)",
-    "03 // Model Predictions",
-    "04 // Data Insights (EDA)",
-    "05 // Concept Drift Matrix"
-])
+    "Introduction",
+    "Business Strategy (Recall@20)",
+    "Model Predictions",
+    "Data Insights (EDA)",
+    "Concept Drift Matrix"
+], key="main_nav")
+
+# Global Reset Button placed at the bottom of the sidebar
+st.sidebar.divider()
+if st.sidebar.button("🔄 Reset System Memory", use_container_width=True):
+    # This deletes all saved variables (like the drifted charts on Page 5)
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    # Rerun the app from the top
+    st.rerun()
 
 # ==========================================
 # PAGE 1: INTRODUCTION
 # ==========================================
-if page == "01 // Introduction":
+if page == "Introduction":
     st.markdown(
         "<h1 style='text-align: center; color: #0f172a;'>CUSTOMER RETENTION <span style='color: #2563eb;'>INTELLIGENCE</span></h1>",
         unsafe_allow_html=True)
@@ -211,13 +219,13 @@ if page == "01 // Introduction":
 # ==========================================
 # PAGE 2: BUSINESS STRATEGY (RECALL@20)
 # ==========================================
-elif page == "02 // Business Strategy (Recall@20)":
+elif page == "Business Strategy (Recall@20)":
     st.title("Business Strategy Tracker")
     st.markdown(
         "<div class='cyber-sub'>Focus: Identifying the Top 20% Highest-Risk Accounts for maximum Retention ROI.</div>",
         unsafe_allow_html=True)
 
-    input_mode = st.radio("Input Method:", ["Single Target Form", "Batch Processing (CSV Upload)"], horizontal=True)
+    input_mode = st.radio("Input Method:", ["Single Target Form", "Batch Processing (CSV Upload)"], horizontal=True, key="input_mode_biz")
 
     if input_mode == "Single Target Form":
         payload = render_input_form("biz")
@@ -295,12 +303,12 @@ elif page == "02 // Business Strategy (Recall@20)":
 # ==========================================
 # PAGE 3: MODEL PREDICTIONS (STANDARD)
 # ==========================================
-elif page == "03 // Model Predictions":
+elif page == "Model Predictions":
     st.title("Global Prediction Engine")
     st.markdown("<div class='cyber-sub'>Focus: Standard classification based on the 0.5 decision threshold.</div>",
                 unsafe_allow_html=True)
 
-    input_mode = st.radio("Input Method:", ["Single Target Form", "Batch Processing (CSV Upload)"], horizontal=True)
+    input_mode = st.radio("Input Method:", ["Single Target Form", "Batch Processing (CSV Upload)"], horizontal=True, key="input_mode_global")
 
     if input_mode == "Single Target Form":
         payload = render_input_form("mod")
@@ -344,7 +352,7 @@ elif page == "03 // Model Predictions":
 # ==========================================
 # PAGE 4: SKELETONS
 # ==========================================
-elif page == "04 // Data Insights (EDA)":
+elif page == "Data Insights (EDA)":
     st.title("Telemetry & Exploratory Data Analysis")
     st.write("Interactive visualizations will be built here.")
 
