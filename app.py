@@ -2,12 +2,97 @@ import streamlit as st
 import pandas as pd
 import requests
 import time
+import os
 import numpy as np
+import joblib
 import plotly.graph_objects as go
-from sklearn.datasets import make_classification
+import xgboost as xgb
+from sklearn.base import clone
 from sklearn.datasets import make_classification
 from sklearn.metrics import recall_score, roc_auc_score
-import xgboost as xgb
+
+########################Custom Functions for app.py#####################
+from sklearn.preprocessing import FunctionTransformer
+
+
+def preprocessing_raw_data(X):
+    df = X.copy()
+
+    if "TotalCharges" in df.columns:
+        df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce").fillna(0.0)
+
+    internet_cols = [
+        "OnlineSecurity", "OnlineBackup", "DeviceProtection",
+        "TechSupport", "StreamingTV", "StreamingMovies"
+    ]
+    phone_cols = ["MultipleLines"]
+    binary_cols = [
+        "OnlineSecurity", "OnlineBackup", "DeviceProtection",
+        "TechSupport", "StreamingTV", "StreamingMovies",
+        "MultipleLines", "Partner", "Dependents",
+        "PhoneService", "PaperlessBilling"
+    ]
+
+    for col in binary_cols:
+        if col in df.columns:
+            df[col] = df[col].astype(str).str.strip().str.lower()
+
+    for col in internet_cols:
+        if col in df.columns:
+            df[col] = df[col].replace("no internet service", "no")
+
+    for col in phone_cols:
+        if col in df.columns:
+            df[col] = df[col].replace("no phone service", "no")
+
+    df["Stability"] = df["Partner"].astype(str) + "_" + df["Dependents"].astype(str)
+
+    return df
+
+
+new_feature_clean_transformer = FunctionTransformer(preprocessing_raw_data)
+
+
+def binaryEncoder(X):
+    df = X.copy()
+    binary_cols = [
+        "OnlineSecurity", "OnlineBackup", "DeviceProtection",
+        "TechSupport", "StreamingTV", "StreamingMovies",
+        "MultipleLines", "Partner", "Dependents",
+        "PhoneService", "PaperlessBilling"
+    ]
+
+    mapping = {"no": 0, "yes": 1}
+
+    for col in binary_cols:
+        if col in df.columns:
+            # map it, and used fillna just in case a weird value sneaks in
+            df[col] = df[col].map(mapping).fillna(df[col])
+
+    return df
+
+
+binary_encoder_transformer = FunctionTransformer(binaryEncoder)
+
+def inject_systematic_drift(df_batch, batch_index, total_batches):
+    """
+    Mathematically alters telemetry to simulate a shifting business environment.
+    Scenario: Competitor slashes prices. Customers are paying less and staying longer,
+    but still churning. Champion model falsely assumes they are safe.
+    """
+    df_mod = df_batch.copy()
+    drift_intensity = (batch_index + 1) / total_batches  # Scales from >0.0 to 1.0
+
+    if 'MonthlyCharges' in df_mod.columns:
+        # Progressively lower monthly charges by up to 40%
+        df_mod['MonthlyCharges'] = df_mod['MonthlyCharges'] * (1 - (0.40 * drift_intensity))
+
+    if 'tenure' in df_mod.columns:
+        # Progressively add up to 24 months of artificial tenure
+        df_mod['tenure'] = df_mod['tenure'] + (24 * drift_intensity)
+
+    return df_mod
+
 
 # --- CONFIGURATION & ENTERPRISE CLEAN CSS ---
 st.set_page_config(page_title="Retention Intelligence", page_icon="📊", layout="wide")
@@ -263,23 +348,23 @@ elif page == "04 // Data Insights (EDA)":
     st.title("Telemetry & Exploratory Data Analysis")
     st.write("Interactive visualizations will be built here.")
 
+
 # ==========================================
 # PAGE 05: CONCEPT DRIFT MATRIX (THE COMMAND CENTER)
 # ==========================================
-elif page == "05 // Concept Drift Matrix":
-
+elif "Concept Drift Matrix" == page:
     # --- 1. STATE MANAGEMENT ---
     if "sim_phase" not in st.session_state:
         st.session_state.sim_phase = "init"
     if "terminal_text" not in st.session_state:
         st.session_state.terminal_text = "> [SYSTEM] Awaiting command...\n"
 
-    # --- 2. DYNAMIC CSS FOR ACTIVE FLOWCHART HIGHLIGHTING ---
+    # --- 2. DYNAMIC CSS ---
     color_1 = "#2563eb" if st.session_state.sim_phase == "init" else "#e2e8f0"
     color_2 = "#eab308" if st.session_state.sim_phase == "streaming" else "#e2e8f0"
     color_3 = "#059669" if st.session_state.sim_phase in ["streaming", "drifted"] else "#e2e8f0"
     color_4 = "#dc2626" if st.session_state.sim_phase == "drifted" else "#e2e8f0"
-    color_5 = "#8b5cf6" if st.session_state.sim_phase in ["retraining", "resolved"] else "#e2e8f0"
+    color_5 = "#8b5cf6" if st.session_state.sim_phase in ["retraining", "testing", "resolved"] else "#e2e8f0"
     color_6 = "#10b981" if st.session_state.sim_phase == "deployed" else "#e2e8f0"
 
     st.markdown(f"""
@@ -302,7 +387,7 @@ elif page == "05 // Concept Drift Matrix":
 
     st.markdown("<div class='title-sim'>Concept Drift & Retraining Simulator</div>", unsafe_allow_html=True)
     st.markdown(
-        "<div class='theory-quote'>Watch the model's <b>Recall</b> degrade over time under shifting data conditions. The system utilizes the official production pipeline for feature engineering.</div>",
+        "<div class='theory-quote'>Observe dynamic SLA failure as systematic mathematical drift is injected into the telemetry stream. Evaluate the Challenger model via a sequential blind holdout comparison.</div>",
         unsafe_allow_html=True)
 
     # --- 3. THE ARCHITECTURE FLOWCHART ---
@@ -310,14 +395,12 @@ elif page == "05 // Concept Drift Matrix":
 
     with flow_col1:
         st.markdown(
-            f"<div class='flow-box box-1'>📊 1. Data Source<br><br><span style='font-size:0.8em; font-weight:normal;'>Native vs Upload</span></div>",
+            f"<div class='flow-box box-1'>📊 1. Data Source<br><br><span style='font-size:0.8em; font-weight:normal;'>1047 Raw Stream</span></div>",
             unsafe_allow_html=True)
-        uploaded_csv = st.file_uploader("Upload Data", type=['csv'], disabled=(st.session_state.sim_phase != "init"),
-                                        label_visibility="collapsed")
 
     with flow_col2:
         st.markdown(
-            f"<div class='flow-box box-2'>🔄 2. Stream<br><br><span style='font-size:0.8em; font-weight:normal;'>Time-Series Inject</span></div>",
+            f"<div class='flow-box box-2'>🔄 2. Stream<br><br><span style='font-size:0.8em; font-weight:normal;'>Math Drift Inject</span></div>",
             unsafe_allow_html=True)
         if st.session_state.sim_phase == "init":
             start_stream = st.button("▶️ Start", use_container_width=True, type="primary")
@@ -372,75 +455,62 @@ elif page == "05 // Concept Drift Matrix":
         graph_box_2 = st.empty()
         success_box = st.empty()
 
-    # --- LOGIC TRIGGER: START STREAM ---
+    # --- LOGIC TRIGGER: START STREAM (PHASE 1) ---
     if start_stream:
         st.session_state.sim_phase = "streaming"
         st.rerun()
 
     if st.session_state.sim_phase == "streaming":
         st.session_state.terminal_text = "> [SYSTEM] Initializing Data Pipeline...\n"
-
         try:
-            # 1. LOAD THE DATA
-            if uploaded_csv is not None:
-                st.session_state.terminal_text += "> [SYSTEM] Custom Sandbox CSV detected. Parsing...\n"
-                log_box.code(st.session_state.terminal_text, language="bash")
-                df = pd.read_csv(uploaded_csv)
-            else:
-                DEFAULT_DATA_PATH = "your_15_percent_data.csv"  # <-- UPDATE THIS
-                st.session_state.terminal_text += f"> [SYSTEM] Loading native telemetry stream: {DEFAULT_DATA_PATH}...\n"
-                log_box.code(st.session_state.terminal_text, language="bash")
+            # 1. LOAD DATA
+            DEFAULT_DATA_PATH = r"C:\Users\priya\Desktop\PyCh_Pro\Churn_Analysis_and_Modelling\data\raw\stream_data.csv"
+            st.session_state.terminal_text += f"> [SYSTEM] Loading 1047-row native stream...\n"
+            log_box.code(st.session_state.terminal_text, language="bash")
 
-                if not os.path.exists(DEFAULT_DATA_PATH):
-                    st.error(f"CRITICAL ERROR: Cannot find '{DEFAULT_DATA_PATH}'.")
-                    st.stop()
-                df = pd.read_csv(DEFAULT_DATA_PATH)
+            if not os.path.exists(DEFAULT_DATA_PATH):
+                st.error(f"CRITICAL ERROR: Cannot find '{DEFAULT_DATA_PATH}'.")
+                st.stop()
+            df = pd.read_csv(DEFAULT_DATA_PATH)
 
-            # 2. PREPARE RAW DATA (No pd.get_dummies here!)
             if 'Churn' in df.columns:
                 df['Churn'] = df['Churn'].map({'Yes': 1, 'No': 0, 1: 1, 0: 0})
-                X_raw = df.drop('Churn', axis=1)
-                y = df['Churn']
+                X_stream = df.drop('Churn', axis=1)
+                y_stream = df['Churn']
 
-                split_idx = int(len(df) * 0.5)
-                X_base, y_base = X_raw.iloc[:split_idx], y.iloc[:split_idx]
-                X_drift, y_drift = X_raw.iloc[split_idx:], y.iloc[split_idx:]
+                # Split: 750 rows for Degradation, 297 for Final Testing
+                X_phase1, y_phase1 = X_stream.iloc[:750], y_stream.iloc[:750]
+                X_phase2, y_phase2 = X_stream.iloc[750:], y_stream.iloc[750:]
             else:
                 st.error("Dataset must contain a 'Churn' column.")
                 st.stop()
 
-            # 3. LOAD THE PRODUCTION PIPELINE
+            # 2. LOAD PIPELINE
             PIPELINE_PATH = "production_pipeline.pkl"
-            st.session_state.terminal_text += f"> [SYSTEM] Loading master pipeline architecture: {PIPELINE_PATH}...\n"
+            st.session_state.terminal_text += f"> [SYSTEM] Loading pre-trained Master Pipeline (70% Base)...\n"
             log_box.code(st.session_state.terminal_text, language="bash")
-
-            if not os.path.exists(PIPELINE_PATH):
-                st.error(f"CRITICAL ERROR: Cannot find '{PIPELINE_PATH}'.")
-                st.stop()
-
             champion = joblib.load(PIPELINE_PATH)
 
-            # Fit the loaded pipeline on the base data to establish the Champion
-            st.session_state.terminal_text += f"> [SYSTEM] Fitting Champion Pipeline on base data block...\n"
-            log_box.code(st.session_state.terminal_text, language="bash")
-            champion.fit(X_base, y_base)
-
-            # 4. STREAM THE DRIFT DATA (Time-Series Simulation)
-            drift_batches = np.array_split(X_drift, 15)
-            drift_y_batches = np.array_split(y_drift, 15)
+            # 3. STREAM & DRIFT PHASE 1 (15 Batches)
+            drift_batches_X = np.array_split(X_phase1, 15)
+            drift_batches_y = np.array_split(y_phase1, 15)
 
             live_metric_history = []
             time_steps = []
+            drifted_X_history = []  # Save the modified data for Challenger retraining!
             drift_detected = False
 
-            st.session_state.terminal_text += "> [WARNING] Injecting chronological drift data...\n"
+            st.session_state.terminal_text += "> [WARNING] Injecting systematic mathematical drift...\n"
             log_box.code(st.session_state.terminal_text, language="bash")
 
-            for i in range(len(drift_batches)):
-                # The pipeline handles all preprocessing automatically here!
-                preds = champion.predict(drift_batches[i])
+            for i in range(15):
+                # Apply the mathematical drift
+                current_batch_X = inject_systematic_drift(drift_batches_X[i], i, 15)
+                drifted_X_history.append(current_batch_X)
+
+                preds = champion.predict(current_batch_X)
                 try:
-                    current_recall = recall_score(drift_y_batches[i], preds, zero_division=0)
+                    current_recall = recall_score(drift_batches_y[i], preds, zero_division=0)
                 except:
                     current_recall = live_metric_history[-1] if live_metric_history else 0.85
 
@@ -448,31 +518,28 @@ elif page == "05 // Concept Drift Matrix":
                 time_steps.append(f"Batch {i + 1}")
                 st.session_state.terminal_text += f"> [METRIC] {time_steps[-1]} | Champion Recall: {current_recall:.3f}\n"
 
-                # SLA Failure Logic
                 if current_recall < 0.65 and not drift_detected:
                     st.session_state.terminal_text += "\n> [CRITICAL] 🚨 SLA BREACH. Recall dropped below 0.65.\n> [CRITICAL] RETRAINING REQUIRED.\n"
                     drift_detected = True
 
                 log_box.code(st.session_state.terminal_text, language="bash")
 
-                # Plotly Graph: X-axis is explicitly Time (Batches), Y-axis is locked 0.0 to 1.0
                 fig1 = go.Figure(data=go.Scatter(x=time_steps, y=live_metric_history, mode='lines+markers',
                                                  line=dict(color='#dc2626' if drift_detected else '#2563eb', width=3)))
                 fig1.add_hline(y=0.65, line_dash="dash", line_color="red", annotation_text="Recall Failure Threshold")
-                fig1.update_layout(
-                    title="Phase 1: Time-Series Model Degradation",
-                    xaxis_title="Chronological Data Stream",
-                    yaxis_title="Recall Score",
-                    yaxis=dict(range=[0.0, 1.0]),
-                    height=300, margin=dict(l=0, r=0, t=40, b=0)
-                )
+                fig1.update_layout(title="Phase 1: Time-Series Model Degradation",
+                                   xaxis_title="Chronological Data Stream", yaxis_title="Recall Score",
+                                   yaxis=dict(range=[0.0, 1.0]), height=300, margin=dict(l=0, r=0, t=40, b=0))
                 graph_box_1.plotly_chart(fig1, use_container_width=True)
-                time.sleep(0.4)
+                time.sleep(0.3)
 
+                # Save state for Phase 2
             st.session_state.sim_phase = "drifted"
             st.session_state.fig1 = fig1
-            st.session_state.X_drift = X_drift
-            st.session_state.y_drift = y_drift
+            st.session_state.X_phase1_drifted = pd.concat(drifted_X_history)  # Challenger needs this!
+            st.session_state.y_phase1 = y_phase1
+            st.session_state.X_phase2 = X_phase2
+            st.session_state.y_phase2 = y_phase2
             st.session_state.champion = champion
             st.rerun()
 
@@ -481,64 +548,90 @@ elif page == "05 // Concept Drift Matrix":
             st.stop()
 
     # Restore Graph 1
-    if st.session_state.sim_phase in ["drifted", "retraining", "resolved", "deployed"] and 'fig1' in st.session_state:
+    if st.session_state.sim_phase in ["drifted", "testing", "resolved", "deployed"] and 'fig1' in st.session_state:
         graph_box_1.plotly_chart(st.session_state.fig1, use_container_width=True)
 
-    # --- LOGIC TRIGGER: START RETRAIN ---
+    # --- LOGIC TRIGGER: START RETRAIN & TESTING (PHASE 2) ---
     if start_retrain:
-        st.session_state.sim_phase = "retraining"
+        st.session_state.sim_phase = "testing"
         st.rerun()
 
-    if st.session_state.sim_phase == "retraining":
+    if st.session_state.sim_phase == "testing":
         st.session_state.terminal_text += "\n> [ACTION] Retraining protocol authorized...\n"
-        log_box.code(st.session_state.terminal_text, language="bash")
-
-        X_drift = st.session_state.X_drift
-        y_drift = st.session_state.y_drift
-        champion = st.session_state.champion
-
         st.session_state.terminal_text += "> [SYSTEM] Cloning pipeline architecture for Challenger...\n"
         log_box.code(st.session_state.terminal_text, language="bash")
 
-        # Clone creates a blank, unfitted copy of your exact pipeline
+        champion = st.session_state.champion
         challenger = clone(champion)
-        challenger.fit(X_drift, y_drift)
 
-        st.session_state.terminal_text += "> [SYSTEM] Evaluating Challenger vs Champion on blind holdout...\n"
+        st.session_state.terminal_text += "> [SYSTEM] Fitting Challenger on recent drifted telemetry...\n"
         log_box.code(st.session_state.terminal_text, language="bash")
 
-        # Use the very last piece of the stream as the ultimate blind holdout
-        split_test = int(len(X_drift) * 0.8)
-        X_test, y_test = X_drift.iloc[split_test:], y_drift.iloc[split_test:]
+        # Train Challenger on the 750 rows that were modified in Phase 1
+        challenger.fit(st.session_state.X_phase1_drifted, st.session_state.y_phase1)
 
-        champ_preds = champion.predict(X_test)
-        chall_preds = challenger.predict(X_test)
+        st.session_state.terminal_text += "> [SYSTEM] Executing Dual-Stream Holdout Evaluation (297 rows)...\n"
+        log_box.code(st.session_state.terminal_text, language="bash")
 
-        champ_recall = recall_score(y_test, champ_preds, zero_division=0)
-        chall_recall = recall_score(y_test, chall_preds, zero_division=0)
+        # Split the remaining 297 rows into 10 testing batches
+        test_batches_X = np.array_split(st.session_state.X_phase2, 10)
+        test_batches_y = np.array_split(st.session_state.y_phase2, 10)
 
-        time.sleep(1.5)
+        champ_history = []
+        challenger_history = []
+        test_time_steps = []
 
-        st.session_state.terminal_text += f"\n> [RESULT] Final Champion Recall: {champ_recall:.3f}\n"
-        st.session_state.terminal_text += f"> [RESULT] Final Challenger Recall: {chall_recall:.3f}\n"
+        # Dual-Stream Animation Loop
+        for i in range(10):
+            # Apply Maximum Drift to the test set to represent the "new normal"
+            current_test_X = inject_systematic_drift(test_batches_X[i], 15, 15)
 
-        if chall_recall > champ_recall:
-            st.session_state.terminal_text += "> [DECISION] SUCCESS. Challenger dominates. New weights approved for production.\n"
+            # Both models predict
+            champ_preds = champion.predict(current_test_X)
+            chall_preds = challenger.predict(current_test_X)
+
+            try:
+                champ_recall = recall_score(test_batches_y[i], champ_preds, zero_division=0)
+                chall_recall = recall_score(test_batches_y[i], chall_preds, zero_division=0)
+            except:
+                champ_recall, chall_recall = 0, 0
+
+            champ_history.append(champ_recall)
+            challenger_history.append(chall_recall)
+            test_time_steps.append(f"Test {i + 1}")
+
+            st.session_state.terminal_text += f"> [TEST] Batch {i + 1} | Champion: {champ_recall:.2f} | Challenger: {chall_recall:.2f}\n"
+            log_box.code(st.session_state.terminal_text, language="bash")
+
+            # The Dual-Line Graph
+            fig2 = go.Figure()
+            fig2.add_trace(
+                go.Scatter(x=test_time_steps, y=champ_history, mode='lines+markers', name='Champion (Degraded)',
+                           line=dict(color='#dc2626', width=2, dash='dot')))
+            fig2.add_trace(
+                go.Scatter(x=test_time_steps, y=challenger_history, mode='lines+markers', name='Challenger (Restored)',
+                           line=dict(color='#059669', width=3)))
+            fig2.add_hline(y=0.65, line_dash="dash", line_color="red", annotation_text="SLA")
+            fig2.update_layout(title="Phase 2: Live Holdout Testing Showdown", xaxis_title="Future Data Stream",
+                               yaxis_title="Recall Score", yaxis=dict(range=[0.0, 1.0]), height=300,
+                               margin=dict(l=0, r=0, t=40, b=0),
+                               legend=dict(yanchor="bottom", y=0.01, xanchor="right", x=0.99))
+
+            graph_box_2.plotly_chart(fig2, use_container_width=True)
+            time.sleep(0.4)
+
+        avg_champ = np.mean(champ_history)
+        avg_chall = np.mean(challenger_history)
+
+        st.session_state.terminal_text += f"\n> [RESULT] Final Avg Champion Recall: {avg_champ:.3f}\n"
+        st.session_state.terminal_text += f"> [RESULT] Final Avg Challenger Recall: {avg_chall:.3f}\n"
+
+        if avg_chall > avg_champ:
+            st.session_state.terminal_text += "> [DECISION] SUCCESS. Challenger dominates. New weights approved.\n"
         else:
-            st.session_state.terminal_text += "> [DECISION] WARNING. Challenger underperformed. Manual review required.\n"
+            st.session_state.terminal_text += "> [DECISION] WARNING. Challenger underperformed.\n"
 
         log_box.code(st.session_state.terminal_text, language="bash")
-
-        fig2 = go.Figure()
-        fig2.add_trace(go.Bar(x=['Champion (Old)', 'Challenger (New)'], y=[champ_recall, chall_recall],
-                              marker_color=['#94a3b8', '#059669']))
-        fig2.add_hline(y=0.65, line_dash="dash", line_color="red")
-        fig2.update_layout(
-            title="Phase 2: Holdout Recall Matrix",
-            yaxis_title="Recall Score",
-            yaxis=dict(range=[0.0, 1.0]),
-            height=300, margin=dict(l=0, r=0, t=40, b=0)
-        )
 
         st.session_state.fig2 = fig2
         st.session_state.sim_phase = "resolved"
