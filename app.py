@@ -9,17 +9,51 @@ import plotly.graph_objects as go
 import xgboost as xgb
 from sklearn.base import clone
 from sklearn.metrics import recall_score
+from sklearn.preprocessing import FunctionTransformer
 
 # ==========================================
-# INTERNAL MODEL LOGIC (REPLACING FASTAPI)
+# 1. CUSTOM FUNCTIONS (MUST BE DEFINED FIRST)
 # ==========================================
+def preprocessing_raw_data(X):
+    df = X.copy()
+    if "TotalCharges" in df.columns:
+        df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce").fillna(0.0)
+    internet_cols = ["OnlineSecurity", "OnlineBackup", "DeviceProtection", "TechSupport", "StreamingTV", "StreamingMovies"]
+    phone_cols = ["MultipleLines"]
+    binary_cols = ["OnlineSecurity", "OnlineBackup", "DeviceProtection", "TechSupport", "StreamingTV", "StreamingMovies", "MultipleLines", "Partner", "Dependents", "PhoneService", "PaperlessBilling"]
 
-# 1. Load the pre-trained pipeline
-# Streamlit Cloud will find this in your root directory
+    for col in binary_cols:
+        if col in df.columns:
+            df[col] = df[col].astype(str).str.strip().str.lower()
+    for col in internet_cols:
+        if col in df.columns:
+            df[col] = df[col].replace("no internet service", "no")
+    for col in phone_cols:
+        if col in df.columns:
+            df[col] = df[col].replace("no phone service", "no")
+
+    df["Stability"] = df["Partner"].astype(str) + "_" + df["Dependents"].astype(str)
+    return df
+
+new_feature_clean_transformer = FunctionTransformer(preprocessing_raw_data)
+
+def binaryEncoder(X):
+    df = X.copy()
+    binary_cols = ["OnlineSecurity", "OnlineBackup", "DeviceProtection", "TechSupport", "StreamingTV", "StreamingMovies", "MultipleLines", "Partner", "Dependents", "PhoneService", "PaperlessBilling"]
+    mapping = {"no": 0, "yes": 1}
+    for col in binary_cols:
+        if col in df.columns:
+            df[col] = df[col].map(mapping).fillna(df[col])
+    return df
+
+binary_encoder_transformer = FunctionTransformer(binaryEncoder)
+
+# ==========================================
+# 2. INTERNAL MODEL LOGIC
+# ==========================================
 PIPELINE_PATH = "production_pipeline.pkl"
 
-
-@st.cache_resource  # This keeps the model in memory so it doesn't reload on every click
+@st.cache_resource
 def load_production_model():
     if os.path.exists(PIPELINE_PATH):
         return joblib.load(PIPELINE_PATH)
@@ -27,110 +61,7 @@ def load_production_model():
         st.error(f"Model file '{PIPELINE_PATH}' not found!")
         return None
 
-
 champion_model = load_production_model()
-
-
-def get_model_probability(input_data):
-    """
-    Takes the payload, runs the model, and returns the
-    probability of churn (class 1).
-    """
-    if champion_model:
-        if isinstance(input_data, dict):
-            input_data = pd.DataFrame([input_data])
-
-        # We use predict_proba to get the confidence score
-        # [0][1] gets the probability for the 'Churn' class
-        probabilities = champion_model.predict_proba(input_data)
-        return float(probabilities[0][1])
-    return None
-
-
-# 2. Prediction Helper Function
-# This replaces the 'requests.post' call you would have made to FastAPI
-def get_model_prediction(input_data):
-    """
-    Takes a dataframe or dictionary, runs the champion model,
-    and returns the prediction.
-    """
-    if champion_model:
-        # If input_data is a dict, convert to DataFrame
-        if isinstance(input_data, dict):
-            input_data = pd.DataFrame([input_data])
-
-        prediction = champion_model.predict(input_data)
-        return prediction[0]
-    return None
-
-
-# ==========================================
-# END OF INTERNAL MODEL LOGIC
-# ==========================================
-
-
-########################Custom Functions for app.py#####################
-from sklearn.preprocessing import FunctionTransformer
-
-
-def preprocessing_raw_data(X):
-    df = X.copy()
-
-    if "TotalCharges" in df.columns:
-        df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce").fillna(0.0)
-
-    internet_cols = [
-        "OnlineSecurity", "OnlineBackup", "DeviceProtection",
-        "TechSupport", "StreamingTV", "StreamingMovies"
-    ]
-    phone_cols = ["MultipleLines"]
-    binary_cols = [
-        "OnlineSecurity", "OnlineBackup", "DeviceProtection",
-        "TechSupport", "StreamingTV", "StreamingMovies",
-        "MultipleLines", "Partner", "Dependents",
-        "PhoneService", "PaperlessBilling"
-    ]
-
-    for col in binary_cols:
-        if col in df.columns:
-            df[col] = df[col].astype(str).str.strip().str.lower()
-
-    for col in internet_cols:
-        if col in df.columns:
-            df[col] = df[col].replace("no internet service", "no")
-
-    for col in phone_cols:
-        if col in df.columns:
-            df[col] = df[col].replace("no phone service", "no")
-
-    df["Stability"] = df["Partner"].astype(str) + "_" + df["Dependents"].astype(str)
-
-    return df
-
-
-new_feature_clean_transformer = FunctionTransformer(preprocessing_raw_data)
-
-
-def binaryEncoder(X):
-    df = X.copy()
-    binary_cols = [
-        "OnlineSecurity", "OnlineBackup", "DeviceProtection",
-        "TechSupport", "StreamingTV", "StreamingMovies",
-        "MultipleLines", "Partner", "Dependents",
-        "PhoneService", "PaperlessBilling"
-    ]
-
-    mapping = {"no": 0, "yes": 1}
-
-    for col in binary_cols:
-        if col in df.columns:
-            # map it, and used fillna just in case a weird value sneaks in
-            df[col] = df[col].map(mapping).fillna(df[col])
-
-    return df
-
-
-binary_encoder_transformer = FunctionTransformer(binaryEncoder)
 
 
 # ==========================================
