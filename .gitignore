@@ -74,7 +74,6 @@ data/interim/
 *.sqlite3
 
 # ── Trained Models ───────────────────────────────────────────
-*.pkl
 *.joblib
 *.onnx
 *.pt
