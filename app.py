@@ -48,11 +48,14 @@ def binaryEncoder(X):
 
 binary_encoder_transformer = FunctionTransformer(binaryEncoder)
 
+import __main__
+__main__.preprocessing_raw_data = preprocessing_raw_data
+__main__.binaryEncoder = binaryEncoder
+
 # ==========================================
 # 2. INTERNAL MODEL LOGIC
 # ==========================================
 PIPELINE_PATH = "production_pipeline.pkl"
-
 @st.cache_resource
 def load_production_model():
     if os.path.exists(PIPELINE_PATH):
