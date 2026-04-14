@@ -11,6 +11,63 @@ from sklearn.base import clone
 from sklearn.datasets import make_classification
 from sklearn.metrics import recall_score, roc_auc_score
 
+# ==========================================
+# INTERNAL MODEL LOGIC (REPLACING FASTAPI)
+# ==========================================
+
+# 1. Load the pre-trained pipeline
+# Streamlit Cloud will find this in your root directory
+PIPELINE_PATH = "production_pipeline.pkl"
+
+
+@st.cache_resource  # This keeps the model in memory so it doesn't reload on every click
+def load_production_model():
+    if os.path.exists(PIPELINE_PATH):
+        return joblib.load(PIPELINE_PATH)
+    else:
+        st.error(f"Model file '{PIPELINE_PATH}' not found!")
+        return None
+
+
+champion_model = load_production_model()
+
+
+def get_model_probability(input_data):
+    """
+    Takes the payload, runs the model, and returns the
+    probability of churn (class 1).
+    """
+    if champion_model:
+        if isinstance(input_data, dict):
+            input_data = pd.DataFrame([input_data])
+
+        # We use predict_proba to get the confidence score
+        # [0][1] gets the probability for the 'Churn' class
+        probabilities = champion_model.predict_proba(input_data)
+        return float(probabilities[0][1])
+    return None
+
+# 2. Prediction Helper Function
+# This replaces the 'requests.post' call you would have made to FastAPI
+def get_model_prediction(input_data):
+    """
+    Takes a dataframe or dictionary, runs the champion model,
+    and returns the prediction.
+    """
+    if champion_model:
+        # If input_data is a dict, convert to DataFrame
+        if isinstance(input_data, dict):
+            input_data = pd.DataFrame([input_data])
+
+        prediction = champion_model.predict(input_data)
+        return prediction[0]
+    return None
+
+
+# ==========================================
+# END OF INTERNAL MODEL LOGIC
+# ==========================================
+
 
 
 ########################Custom Functions for app.py#####################
@@ -150,7 +207,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-API_URL = "http://127.0.0.1:8000"
+API_URL = os.getenv("CHURN_API_URL", "http://localhost:8000")
 
 
 # --- REUSABLE UI COMPONENTS ---
