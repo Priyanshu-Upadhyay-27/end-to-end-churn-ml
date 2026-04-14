@@ -3,6 +3,7 @@ import pandas as pd
 import requests
 import time
 import os
+import sys
 import numpy as np
 import joblib
 import plotly.graph_objects as go
@@ -48,9 +49,10 @@ def binaryEncoder(X):
 
 binary_encoder_transformer = FunctionTransformer(binaryEncoder)
 
+# Bulletproof namespace injection
 import __main__
-__main__.preprocessing_raw_data = preprocessing_raw_data
-__main__.binaryEncoder = binaryEncoder
+setattr(sys.modules['__main__'], 'preprocessing_raw_data', preprocessing_raw_data)
+setattr(sys.modules['__main__'], 'binaryEncoder', binaryEncoder)
 
 # ==========================================
 # 2. INTERNAL MODEL LOGIC
@@ -66,15 +68,12 @@ def load_production_model():
 
 champion_model = load_production_model()
 
-
 # ==========================================
 # CUSTOM SYSTEMATIC DRIFT FUNCTION
 # ==========================================
 def inject_systematic_drift(df_batch, batch_index, total_batches):
     """
     Mathematically alters telemetry to simulate a harsh shifting business environment.
-    Scenario: Extreme competitor undercutting. Churners are given massive fake loyalty
-    metrics to blind the Champion model.
     """
     df_mod = df_batch.copy()
     drift_intensity = (batch_index + 1) / total_batches
@@ -98,9 +97,6 @@ st.set_page_config(page_title="Retention Intelligence", page_icon="📊", layout
 
 st.markdown("""
     <style>
-    /* NOTE: We have completely removed the code that hides the header. 
-       The native Streamlit navigation button will now appear normally. */
-
     /* Main Background & Text */
     .stApp { background-color: #f4f6f9; color: #334155; font-family: 'Inter', sans-serif; }
 
@@ -122,8 +118,6 @@ st.markdown("""
     /* Metrics Numbers */
     [data-testid="stMetricValue"] { color: #2563eb; font-weight: 800; }
 
-
-
     /* Custom Dark Terminal */
     .terminal-box {
         background-color: #0f172a;
@@ -142,7 +136,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 API_URL = os.getenv("CHURN_API_URL", "http://localhost:8000")
-
 
 # --- REUSABLE UI COMPONENTS ---
 def render_input_form(key_prefix):
@@ -186,7 +179,6 @@ def render_input_form(key_prefix):
             }
     return None
 
-
 # --- SIDEBAR NAVIGATION ---
 st.sidebar.title("System // Menu")
 page = st.sidebar.radio("Navigation", [
@@ -197,28 +189,19 @@ page = st.sidebar.radio("Navigation", [
     "Concept Drift Matrix"
 ], key="main_nav")
 
-# Global Reset Button placed at the bottom of the sidebar
 st.sidebar.divider()
 if st.sidebar.button("🔄 Reset System Memory", use_container_width=True):
-    # This deletes all saved variables (like the drifted charts on Page 5)
     for key in list(st.session_state.keys()):
         del st.session_state[key]
-    # Rerun the app from the top
     st.rerun()
 
 # ==========================================
 # PAGE 1: INTRODUCTION
 # ==========================================
 if page == "Introduction":
-    st.markdown(
-        "<h1 style='text-align: center; color: #0f172a;'>CUSTOMER RETENTION <span style='color: #2563eb;'>INTELLIGENCE</span></h1>",
-        unsafe_allow_html=True)
-    st.markdown("<h3 style='text-align: center; color: #64748b; font-weight: 400;'>ANTICIPATE. INTERVENE. RETAIN.</h3>",
-                unsafe_allow_html=True)
-    st.markdown(
-        "<p style='text-align: center; font-size: 1rem; color: #94a3b8;'>Advanced Telecommunications Churn Analytics</p>",
-        unsafe_allow_html=True)
-
+    st.markdown("<h1 style='text-align: center; color: #0f172a;'>CUSTOMER RETENTION <span style='color: #2563eb;'>INTELLIGENCE</span></h1>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; color: #64748b; font-weight: 400;'>ANTICIPATE. INTERVENE. RETAIN.</h3>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; font-size: 1rem; color: #94a3b8;'>Advanced Telecommunications Churn Analytics</p>", unsafe_allow_html=True)
     st.divider()
 
     col1, col2, col3 = st.columns(3)
@@ -227,20 +210,16 @@ if page == "Introduction":
     col3.metric(label="Inference Latency", value="< 50ms", delta="Real-time")
 
     st.markdown("### ⚡ The Objective")
-    st.write(
-        "Customer attrition is a silent revenue killer. This platform deploys a highly tuned XGBoost pipeline to scan account metadata, service configurations, and billing histories to identify flight-risk customers *before* they cancel their contracts. Select a module from the sidebar to begin.")
+    st.write("Customer attrition is a silent revenue killer. This platform deploys a highly tuned XGBoost pipeline to scan account metadata, service configurations, and billing histories to identify flight-risk customers *before* they cancel their contracts. Select a module from the sidebar to begin.")
 
 # ==========================================
 # PAGE 2: BUSINESS STRATEGY (RECALL@20)
 # ==========================================
 elif page == "Business Strategy (Recall@20)":
     st.title("Business Strategy Tracker")
-    st.markdown(
-        "<div class='cyber-sub'>Focus: Identifying the Top 20% Highest-Risk Accounts for maximum Retention ROI.</div>",
-        unsafe_allow_html=True)
+    st.markdown("<div class='cyber-sub'>Focus: Identifying the Top 20% Highest-Risk Accounts for maximum Retention ROI.</div>", unsafe_allow_html=True)
 
-    input_mode = st.radio("Input Method:", ["Single Target Form", "Batch Processing (CSV Upload)"], horizontal=True,
-                          key="input_mode_biz")
+    input_mode = st.radio("Input Method:", ["Single Target Form", "Batch Processing (CSV Upload)"], horizontal=True, key="input_mode_biz")
 
     if input_mode == "Single Target Form":
         payload = render_input_form("biz")
@@ -252,12 +231,10 @@ elif page == "Business Strategy (Recall@20)":
                         prob = response.json()['probability']
                         st.divider()
                         if prob >= 0.80:
-                            st.markdown(f"<span class='neon-red'>⚠️ CRITICAL RISK (Top Percentile)</span>",
-                                        unsafe_allow_html=True)
+                            st.markdown(f"<span class='neon-red'>⚠️ CRITICAL RISK (Top Percentile)</span>", unsafe_allow_html=True)
                             st.write("Recommend immediate High-Value Retention Protocol (Discount/Upgrade).")
                         else:
-                            st.markdown(f"<span class='neon-green'>✅ MODERATE TO LOW RISK</span>",
-                                        unsafe_allow_html=True)
+                            st.markdown(f"<span class='neon-green'>✅ MODERATE TO LOW RISK</span>", unsafe_allow_html=True)
                         st.progress(prob)
                         st.write(f"**Calculated Probability:** {prob * 100:.2f}%")
                     else:
@@ -286,7 +263,6 @@ elif page == "Business Strategy (Recall@20)":
                         st.success(f"Scan Complete. Isolated {top_20_cutoff} critical targets.")
 
                         if has_ground_truth:
-                            # Safely convert target to binary for math
                             if final_df['Churn'].dtype == 'object':
                                 final_df['Churn_Binary'] = final_df['Churn'].map({'Yes': 1, 'No': 0})
                                 top_20_df['Churn_Binary'] = top_20_df['Churn'].map({'Yes': 1, 'No': 0})
@@ -296,8 +272,7 @@ elif page == "Business Strategy (Recall@20)":
 
                             total_actual_churners = final_df['Churn_Binary'].sum()
                             captured_churners = top_20_df['Churn_Binary'].sum()
-                            recall_at_20 = (
-                                    captured_churners / total_actual_churners * 100) if total_actual_churners > 0 else 0
+                            recall_at_20 = (captured_churners / total_actual_churners * 100) if total_actual_churners > 0 else 0
 
                             st.markdown("### 📊 Evaluation Metrics")
                             mcol1, mcol2, mcol3 = st.columns(3)
@@ -306,10 +281,8 @@ elif page == "Business Strategy (Recall@20)":
                             mcol3.metric("Recall @ 20", f"{recall_at_20:.2f}%", delta="Matched Notebook")
                             st.divider()
 
-                        # Formatting output dataframe (dropping internal binary column before display)
                         display_df = top_20_df.drop(columns=['Churn_Binary'], errors='ignore')
-                        st.dataframe(display_df.style.background_gradient(cmap="Reds", subset=["probability"]),
-                                     use_container_width=True)
+                        st.dataframe(display_df.style.background_gradient(cmap="Reds", subset=["probability"]), use_container_width=True)
                     else:
                         st.error(f"API Error: {response.text}")
                 except Exception as e:
@@ -320,11 +293,9 @@ elif page == "Business Strategy (Recall@20)":
 # ==========================================
 elif page == "Model Predictions":
     st.title("Global Prediction Engine")
-    st.markdown("<div class='cyber-sub'>Focus: Standard classification based on the 0.5 decision threshold.</div>",
-                unsafe_allow_html=True)
+    st.markdown("<div class='cyber-sub'>Focus: Standard classification based on the 0.5 decision threshold.</div>", unsafe_allow_html=True)
 
-    input_mode = st.radio("Input Method:", ["Single Target Form", "Batch Processing (CSV Upload)"], horizontal=True,
-                          key="input_mode_global")
+    input_mode = st.radio("Input Method:", ["Single Target Form", "Batch Processing (CSV Upload)"], horizontal=True, key="input_mode_global")
 
     if input_mode == "Single Target Form":
         payload = render_input_form("mod")
@@ -372,18 +343,15 @@ elif page == "Data Insights (EDA)":
     st.title("Telemetry & Exploratory Data Analysis")
     st.write("Interactive visualizations will be built here.")
 
-
 # ==========================================
-# PAGE 05: CONCEPT DRIFT MATRIX (THE COMMAND CENTER)
+# PAGE 05: CONCEPT DRIFT MATRIX
 # ==========================================
 elif "Concept Drift Matrix" == page:
-    # --- 1. STATE MANAGEMENT ---
     if "sim_phase" not in st.session_state:
         st.session_state.sim_phase = "init"
     if "terminal_text" not in st.session_state:
         st.session_state.terminal_text = "> [SYSTEM] Awaiting command...\n"
 
-    # --- 2. DYNAMIC CSS ---
     color_1 = "#2563eb" if st.session_state.sim_phase == "init" else "#e2e8f0"
     color_2 = "#eab308" if st.session_state.sim_phase == "streaming" else "#e2e8f0"
     color_3 = "#059669" if st.session_state.sim_phase in ["streaming", "drifted"] else "#e2e8f0"
@@ -407,62 +375,39 @@ elif "Concept Drift Matrix" == page:
         .box-5 {{ border-color: {color_5}; box-shadow: 0 0 10px {color_5}40; }}
         .box-6 {{ border-color: {color_6}; box-shadow: 0 0 10px {color_6}40; }}
 
-        /* Force Native Streamlit Code Block to have a fixed height and scroll */
-        div[data-testid="stCodeBlock"] {{
-            max-height: 980px !important; 
-            overflow-y: auto !important;
-        }}
-        div[data-testid="stCodeBlock"] pre {{
-            max-height: 980px !important;
-        }}
+        div[data-testid="stCodeBlock"] {{ max-height: 980px !important; overflow-y: auto !important; }}
+        div[data-testid="stCodeBlock"] pre {{ max-height: 980px !important; }}
         </style>
     """, unsafe_allow_html=True)
 
     st.markdown("<div class='title-sim'>Concept Drift & Retraining Simulator</div>", unsafe_allow_html=True)
-    st.markdown(
-        "<div class='theory-quote'>Observe dynamic SLA failure as systematic mathematical drift is injected into the telemetry stream. Evaluate the Challenger model via a sequential blind holdout comparison.</div>",
-        unsafe_allow_html=True)
+    st.markdown("<div class='theory-quote'>Observe dynamic SLA failure as systematic mathematical drift is injected into the telemetry stream. Evaluate the Challenger model via a sequential blind holdout comparison.</div>", unsafe_allow_html=True)
 
-    # --- 3. THE ARCHITECTURE FLOWCHART ---
     flow_col1, flow_col2, flow_col3, flow_col4, flow_col5, flow_col6 = st.columns(6)
 
     with flow_col1:
-        st.markdown(
-            f"<div class='flow-box box-1'>📊 1. Data Source<br><br><span style='font-size:0.8em; font-weight:normal;'>Native or Custom CSV</span></div>",
-            unsafe_allow_html=True)
-        uploaded_stream_csv = st.file_uploader("Upload Stream", type=['csv'],
-                                               disabled=(st.session_state.sim_phase != "init"),
-                                               label_visibility="collapsed")
+        st.markdown(f"<div class='flow-box box-1'>📊 1. Data Source<br><br><span style='font-size:0.8em; font-weight:normal;'>Native or Custom CSV</span></div>", unsafe_allow_html=True)
+        uploaded_stream_csv = st.file_uploader("Upload Stream", type=['csv'], disabled=(st.session_state.sim_phase != "init"), label_visibility="collapsed")
     with flow_col2:
-        st.markdown(
-            f"<div class='flow-box box-2'>🔄 2. Stream<br><br><span style='font-size:0.8em; font-weight:normal;'>Math Drift Inject</span></div>",
-            unsafe_allow_html=True)
+        st.markdown(f"<div class='flow-box box-2'>🔄 2. Stream<br><br><span style='font-size:0.8em; font-weight:normal;'>Math Drift Inject</span></div>", unsafe_allow_html=True)
         if st.session_state.sim_phase == "init":
             start_stream = st.button("▶️ Start", use_container_width=True, type="primary")
         else:
             st.button("▶️ Done", use_container_width=True, disabled=True)
             start_stream = False
     with flow_col3:
-        st.markdown(
-            f"<div class='flow-box box-3'>🤖 3. Champion<br><br><span style='font-size:0.8em; font-weight:normal;'>Standard Pipeline</span></div>",
-            unsafe_allow_html=True)
+        st.markdown(f"<div class='flow-box box-3'>🤖 3. Champion<br><br><span style='font-size:0.8em; font-weight:normal;'>Standard Pipeline</span></div>", unsafe_allow_html=True)
     with flow_col4:
-        st.markdown(
-            f"<div class='flow-box box-4'>📉 4. Monitor<br><br><span style='font-size:0.8em; font-weight:normal;'>Recall SLA</span></div>",
-            unsafe_allow_html=True)
+        st.markdown(f"<div class='flow-box box-4'>📉 4. Monitor<br><br><span style='font-size:0.8em; font-weight:normal;'>Recall SLA</span></div>", unsafe_allow_html=True)
     with flow_col5:
-        st.markdown(
-            f"<div class='flow-box box-5'>⚔️ 5. Challenger<br><br><span style='font-size:0.8em; font-weight:normal;'>Retrain Protocol</span></div>",
-            unsafe_allow_html=True)
+        st.markdown(f"<div class='flow-box box-5'>⚔️ 5. Challenger<br><br><span style='font-size:0.8em; font-weight:normal;'>Retrain Protocol</span></div>", unsafe_allow_html=True)
         if st.session_state.sim_phase == "drifted":
             start_retrain = st.button("⚔️ Retrain", use_container_width=True, type="primary")
         else:
             st.button("⚔️ Locked", use_container_width=True, disabled=True)
             start_retrain = False
     with flow_col6:
-        st.markdown(
-            f"<div class='flow-box box-6'>🚀 6. Production<br><br><span style='font-size:0.8em; font-weight:normal;'>Deploy Winner</span></div>",
-            unsafe_allow_html=True)
+        st.markdown(f"<div class='flow-box box-6'>🚀 6. Production<br><br><span style='font-size:0.8em; font-weight:normal;'>Deploy Winner</span></div>", unsafe_allow_html=True)
         if st.session_state.sim_phase == "resolved":
             deploy_model = st.button("🚀 Deploy", use_container_width=True, type="primary")
         elif st.session_state.sim_phase == "deployed":
@@ -473,17 +418,11 @@ elif "Concept Drift Matrix" == page:
             deploy_model = False
 
     st.divider()
-
-    # --- 4. THE COMMAND CENTER UI ---
     col_logs, col_graphs = st.columns([1, 2])
 
     with col_logs:
         st.markdown("### 🖥️ System Terminal")
-
-        # 1. Create a native scrolling container locked to exactly 1000 pixels
         terminal_container = st.container(height=930)
-
-        # 2. Put the code box INSIDE the locked container
         log_box = terminal_container.empty()
         log_box.code(st.session_state.terminal_text, language="bash")
 
@@ -494,7 +433,6 @@ elif "Concept Drift Matrix" == page:
         graph_box_3 = st.empty()
         success_box = st.empty()
 
-    # --- LOGIC TRIGGER: START STREAM (PHASE 1) ---
     if start_stream:
         st.session_state.sim_phase = "streaming"
         st.rerun()
@@ -502,7 +440,6 @@ elif "Concept Drift Matrix" == page:
     if st.session_state.sim_phase == "streaming":
         st.session_state.terminal_text += "\n> [SYSTEM] Initializing Data Pipeline...\n"
         try:
-            # 1. LOAD DATA (CUSTOM OR NATIVE)
             if uploaded_stream_csv is not None:
                 st.session_state.terminal_text += f"> [SYSTEM] Custom CSV detected. Validating schema...\n"
                 log_box.code(st.session_state.terminal_text, language="bash")
@@ -511,7 +448,6 @@ elif "Concept Drift Matrix" == page:
                     st.error("Uploaded CSV is too small. Please provide at least 300 rows for stream simulation.")
                     st.stop()
             else:
-                # --- FIXED: USING CLOUD-READY RELATIVE PATH ---
                 DEFAULT_DATA_PATH = "data/raw/stream_data.csv"
                 st.session_state.terminal_text += f"> [SYSTEM] Loading native 1047-row stream...\n"
                 log_box.code(st.session_state.terminal_text, language="bash")
@@ -525,7 +461,6 @@ elif "Concept Drift Matrix" == page:
                 df['Churn'] = df['Churn'].map({'Yes': 1, 'No': 0, 1: 1, 0: 0})
                 X_stream = df.drop('Churn', axis=1)
                 y_stream = df['Churn']
-
                 split_idx = int(len(df) * 0.70)
                 X_phase1, y_phase1 = X_stream.iloc[:split_idx], y_stream.iloc[:split_idx]
                 X_phase2, y_phase2 = X_stream.iloc[split_idx:], y_stream.iloc[split_idx:]
@@ -533,13 +468,12 @@ elif "Concept Drift Matrix" == page:
                 st.error("Dataset must contain a 'Churn' column for SLA tracking.")
                 st.stop()
 
-            # 2. LOAD PIPELINE
-            PIPELINE_PATH = "production_pipeline.pkl"
-            st.session_state.terminal_text += f"> [SYSTEM] Loading pre-trained Master Pipeline...\n"
-            log_box.code(st.session_state.terminal_text, language="bash")
-            champion = joblib.load(PIPELINE_PATH)
+            # --- OPTIMIZATION: Reuse the global model instead of reloading ---
+            if champion_model is None:
+                st.error("CRITICAL ERROR: Champion model failed to load at startup. Cannot run simulation.")
+                st.stop()
+            champion = champion_model
 
-            # 3. STREAM & DRIFT PHASE 1 (15 Batches)
             drift_batches_X = np.array_split(X_phase1, 15)
             drift_batches_y = np.array_split(y_phase1, 15)
 
@@ -551,7 +485,6 @@ elif "Concept Drift Matrix" == page:
             st.session_state.terminal_text += "\n> [WARNING] Injecting sequential data batches...\n"
             log_box.code(st.session_state.terminal_text, language="bash")
 
-            # NARRATIVE INJECTIONS
             narrative_events = {
                 3: "> [MARKET ALERT] Competitor announces aggressive 65% price slash targeting our premium segment.",
                 7: "> [ECONOMY ALERT] Macro-inflation detected. Customer price sensitivity at 12-month high.",
@@ -603,11 +536,9 @@ elif "Concept Drift Matrix" == page:
             st.error(f"Pipeline Processing Error: {str(e)}")
             st.stop()
 
-    # Restore Graph 1
     if st.session_state.sim_phase in ["drifted", "testing", "resolved", "deployed"] and 'fig1' in st.session_state:
         graph_box_1.plotly_chart(st.session_state.fig1, use_container_width=True)
 
-    # --- LOGIC TRIGGER: START RETRAIN & TESTING (PHASE 2) ---
     if start_retrain:
         st.session_state.sim_phase = "testing"
         st.rerun()
@@ -620,11 +551,9 @@ elif "Concept Drift Matrix" == page:
         champion = st.session_state.champion
         challenger = clone(champion)
 
-        # THE "WHOLE DATA + HIGH WEIGHT NEW DATA" STRATEGY
         st.session_state.terminal_text += "> [SYSTEM] Fetching original 70% Base Data to prevent Catastrophic Forgetting...\n"
         log_box.code(st.session_state.terminal_text, language="bash")
 
-        # --- FIXED: USING CLOUD-READY RELATIVE PATH ---
         BASE_DATA_PATH = "data/raw/train_data.csv"
 
         if os.path.exists(BASE_DATA_PATH):
@@ -642,15 +571,12 @@ elif "Concept Drift Matrix" == page:
 
             X_drift_heavy = pd.concat([st.session_state.X_phase1_drifted] * 3)
             y_drift_heavy = pd.concat([st.session_state.y_phase1] * 3)
-
             X_train_final = pd.concat([X_base, X_drift_heavy], ignore_index=True)
             y_train_final = pd.concat([y_base, y_drift_heavy], ignore_index=True)
         else:
-            st.error(
-                f"⚠️ CRITICAL: Could not find {BASE_DATA_PATH}. Please ensure your 70% training data is exported there.")
+            st.error(f"⚠️ CRITICAL: Could not find {BASE_DATA_PATH}. Please ensure your 70% training data is exported there.")
             st.stop()
 
-        # REALISTIC TRAINING THEATER
         st.session_state.terminal_text += "> [SYSTEM] Initiating Challenger Retraining Protocol...\n"
         log_box.code(st.session_state.terminal_text, language="bash")
 
@@ -702,22 +628,14 @@ elif "Concept Drift Matrix" == page:
             log_box.code(st.session_state.terminal_text, language="bash")
 
             fig2 = go.Figure()
-            fig2.add_trace(
-                go.Scatter(x=test_time_steps, y=champ_history, mode='lines+markers', name='Champion (Degraded)',
-                           line=dict(color='#dc2626', width=2, dash='dot')))
-            fig2.add_trace(
-                go.Scatter(x=test_time_steps, y=challenger_history, mode='lines+markers', name='Challenger (Restored)',
-                           line=dict(color='#059669', width=3)))
+            fig2.add_trace(go.Scatter(x=test_time_steps, y=champ_history, mode='lines+markers', name='Champion (Degraded)', line=dict(color='#dc2626', width=2, dash='dot')))
+            fig2.add_trace(go.Scatter(x=test_time_steps, y=challenger_history, mode='lines+markers', name='Challenger (Restored)', line=dict(color='#059669', width=3)))
             fig2.add_hline(y=0.65, line_dash="dash", line_color="red", annotation_text="SLA")
-            fig2.update_layout(title="Phase 2: Live Holdout Testing Showdown", xaxis_title="Future Data Stream",
-                               yaxis_title="Recall Score", yaxis=dict(range=[0.0, 1.0]), height=300,
-                               margin=dict(l=0, r=0, t=40, b=0),
-                               legend=dict(yanchor="bottom", y=0.01, xanchor="right", x=0.99))
+            fig2.update_layout(title="Phase 2: Live Holdout Testing Showdown", xaxis_title="Future Data Stream", yaxis_title="Recall Score", yaxis=dict(range=[0.0, 1.0]), height=300, margin=dict(l=0, r=0, t=40, b=0), legend=dict(yanchor="bottom", y=0.01, xanchor="right", x=0.99))
 
             graph_box_2.plotly_chart(fig2, use_container_width=True)
             time.sleep(0.4)
 
-        # CALCULATE DIFFERENCE & DECLARE WINNER
         avg_champ = np.mean(champ_history)
         avg_chall = np.mean(challenger_history)
         recall_diff = avg_chall - avg_champ
@@ -736,7 +654,6 @@ elif "Concept Drift Matrix" == page:
 
         log_box.code(st.session_state.terminal_text, language="bash")
 
-        # GRAPH 3: The Difference Bar Chart & Declaration Box
         fig3 = go.Figure()
         fig3.add_trace(go.Bar(
             x=['Champion (Degraded)', 'Challenger (Retrained)'],
@@ -746,21 +663,8 @@ elif "Concept Drift Matrix" == page:
             textposition='auto',
             width=[0.4, 0.4]
         ))
-
-        fig3.add_annotation(
-            x=0.5, y=0.85, xref="paper", yref="paper",
-            text=result_text, showarrow=False,
-            font=dict(size=14, color=result_color),
-            bgcolor="white", bordercolor=result_color, borderwidth=2, borderpad=6
-        )
-
-        fig3.update_layout(
-            title="Final Performance Matrix & Decision",
-            yaxis_title="Average Recall",
-            yaxis=dict(range=[0.0, 1.0]),
-            height=300,
-            margin=dict(l=0, r=0, t=40, b=0)
-        )
+        fig3.add_annotation(x=0.5, y=0.85, xref="paper", yref="paper", text=result_text, showarrow=False, font=dict(size=14, color=result_color), bgcolor="white", bordercolor=result_color, borderwidth=2, borderpad=6)
+        fig3.update_layout(title="Final Performance Matrix & Decision", yaxis_title="Average Recall", yaxis=dict(range=[0.0, 1.0]), height=300, margin=dict(l=0, r=0, t=40, b=0))
 
         graph_box_3.plotly_chart(fig3, use_container_width=True)
 
@@ -769,14 +673,12 @@ elif "Concept Drift Matrix" == page:
         st.session_state.sim_phase = "resolved"
         st.rerun()
 
-    # Restore Graphs 2 and 3
     if st.session_state.sim_phase in ["resolved", "deployed"]:
         if 'fig2' in st.session_state:
             graph_box_2.plotly_chart(st.session_state.fig2, use_container_width=True)
         if 'fig3' in st.session_state:
             graph_box_3.plotly_chart(st.session_state.fig3, use_container_width=True)
 
-    # --- LOGIC TRIGGER: DEPLOYMENT ---
     if deploy_model:
         st.session_state.sim_phase = "deployed"
         st.rerun()
@@ -785,8 +687,7 @@ elif "Concept Drift Matrix" == page:
         st.session_state.terminal_text += "\n> [DEPLOYMENT] Initializing API override...\n"
         st.session_state.terminal_text += "> [DEPLOYMENT] System state synchronized. New weights active in production.\n"
         log_box.code(st.session_state.terminal_text, language="bash")
-        success_box.success(
-            "✅ **Deployment Successful:** The Challenger model is now serving live traffic. (Simulation Complete)")
+        success_box.success("✅ **Deployment Successful:** The Challenger model is now serving live traffic. (Simulation Complete)")
 
         if st.button("Reset System Simulator", use_container_width=True):
             for key in list(st.session_state.keys()):
