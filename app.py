@@ -433,7 +433,20 @@ elif page == "Data Insights (EDA)":
     # Insight 3: The Data Trap
     st.markdown("#### 3. The 'Zero Tenure' Trap (Data Quality)")
     st.error(
-        "**Crucial Discovery:** When analyzing the numerical columns, we discovered that 11 customers had a tenure of `0`. Because they had not paid their first bill yet, the `TotalCharges` field was entirely blank (`' '`). If left untreated, this string character would completely crash a production ML pipeline. Our custom Scikit-Learn transformer automatically converts these blanks to `0.0` before inference.")
+        "**Crucial Discovery:** When analyzing the numerical columns, we discovered that 11 customers had a tenure of `0`. Because they had not paid their first bill yet, the `TotalCharges` field was entirely blank (`' '`).")
+
+    anomaly_data = pd.DataFrame({
+        "Customer State": ["Valid Billing Data", "Fatal Data Anomaly (Blank String)"],
+        "Count": [7032, 11]
+    })
+    fig_anomaly = px.bar(anomaly_data, x="Count", y="Customer State", orientation='h',
+                         color="Customer State", color_discrete_sequence=["#059669", "#dc2626"])
+    fig_anomaly.update_layout(height=250, showlegend=False, title="The Hidden Pipeline Killer")
+    st.plotly_chart(fig_anomaly, use_container_width=True)
+
+    st.write(
+        "If left untreated, this invisible string character would completely crash a production ML pipeline in the real world. Our custom Scikit-Learn transformer automatically catches and converts these blanks to `0.0` before inference."
+    )
 
     st.divider()
 
@@ -449,6 +462,43 @@ elif page == "Data Insights (EDA)":
     
     **Core Rule:** One idea $\\rightarrow$ one feature $\\rightarrow$ one validation test against the baseline.
     """)
+    st.divider()
+
+    # Insight 5: Payment Method Anomaly
+    st.markdown("#### 5. The 'Electronic Check' Anomaly")
+    st.write("""
+        While contract length is the primary driver of retention, analyzing our cross-tabulations (`Contract` vs `PaymentMethod`) revealed a massive secondary trigger. 
+
+        A standard Month-to-Month customer paying via Credit Card has a churn probability of **~32%**. However, if that same customer pays via **Electronic Check**, their churn probability skyrockets to **53.7%**.
+
+        **The Business Intuition:** Electronic checks often require manual intervention to pay every month. This acts as a recurring, painful reminder of the bill. Credit cards and bank transfers are automatic and "invisible." A direct business action derived from this model would be offering a one-time $10 account credit to convince Electronic Check users to switch to Auto-Pay.
+        """)
+
+    # Heatmap for the Pivot Table
+    pivot_data = pd.DataFrame({
+        "Contract": ["Month-to-month", "One year", "Two year"],
+        "Bank Transfer": [0.341, 0.097, 0.033],
+        "Credit Card": [0.327, 0.103, 0.022],
+        "Electronic Check": [0.537, 0.184, 0.077],
+        "Mailed Check": [0.315, 0.068, 0.007]
+    }).set_index("Contract")
+
+    fig_heatmap = px.imshow(pivot_data, text_auto=True, aspect="auto",
+                            color_continuous_scale="Reds",
+                            labels=dict(x="Payment Method", y="Contract Type", color="Churn Rate"))
+    fig_heatmap.update_layout(height=300, title="Cross-Tabulation: Contract vs Payment Method")
+    st.plotly_chart(fig_heatmap, use_container_width=True)
+
+    st.divider()
+
+    # Insight 6: The Demographic Multiplier
+    st.markdown("#### 6. The Demographic Risk Multiplier")
+    st.warning("""
+        **The Senior Citizen Vulnerability:**
+        Through univariate analysis, we isolated 1,142 Senior Citizens in the dataset. While being a senior citizen slightly elevates baseline churn, cross-tabulating this demographic with contract types reveals a compounding vulnerability. 
+
+        Seniors are disproportionately likely to live on fixed incomes, making them hyper price-sensitive. When a Senior Citizen is placed on a Month-to-Month contract without the protection of 'Stability' features (like having a Partner or Dependents), they become the single most volatile demographic in the entire pipeline. The XGBoost algorithm aggressively captures this non-linear interaction, flagging them for immediate retention intervention.
+        """)
 
 # ==========================================
 # PAGE 05: CONCEPT DRIFT MATRIX
