@@ -7,7 +7,6 @@ joblib
 # --- Frontend (Streamlit) ---
 streamlit
 requests
-plotly
 
 # --- Machine Learning Stack ---
 pandas
@@ -15,3 +14,4 @@ numpy
 scikit-learn
 xgboost
 mlflow
+plotly
