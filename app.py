@@ -62,22 +62,6 @@ import __main__
 setattr(sys.modules['__main__'], 'preprocessing_raw_data', preprocessing_raw_data)
 setattr(sys.modules['__main__'], 'binaryEncoder', binaryEncoder)
 
-# ==========================================
-# 2. INTERNAL MODEL LOGIC
-# ==========================================
-PIPELINE_PATH = "production_pipeline.pkl"
-
-
-@st.cache_resource
-def load_production_model():
-    if os.path.exists(PIPELINE_PATH):
-        return joblib.load(PIPELINE_PATH)
-    else:
-        st.error(f"Model file '{PIPELINE_PATH}' not found!")
-        return None
-
-
-champion_model = load_production_model()
 
 
 # ==========================================
@@ -470,6 +454,20 @@ elif page == "Data Insights (EDA)":
 # PAGE 05: CONCEPT DRIFT MATRIX
 # ==========================================
 elif "Concept Drift Matrix" == page:
+    # ==========================================
+    # 2. INTERNAL MODEL LOGIC
+    # ==========================================
+
+    PIPELINE_PATH = "production_pipeline.pkl"
+    @st.cache_resource
+    def load_production_model():
+        if os.path.exists(PIPELINE_PATH):
+            return joblib.load(PIPELINE_PATH)
+        else:
+            st.error(f"Model file '{PIPELINE_PATH}' not found!")
+            return None
+    champion_model = load_production_model()
+
     if "sim_phase" not in st.session_state:
         st.session_state.sim_phase = "init"
     if "terminal_text" not in st.session_state:
