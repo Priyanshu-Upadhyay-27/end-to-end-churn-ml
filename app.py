@@ -455,10 +455,16 @@ elif page == "Data Insights (EDA)":
 
     st.markdown("#### 4. Hypothesis-Driven Feature Engineering")
     st.write("""
-        **The Lesson:** Math is not behavior. Dividing random columns doesn't automatically create signal. Creating features blindly (e.g., `cost_per_service = MonthlyCharges / num_services`) without validating if the behavior actually indicates churn risk is a trap. Tree models usually already capture these simple math interactions.
-
-        **The Solution:** Building features based on behavioral segmentation. For example, combining `Partner` and `Dependents` into a categorical `Stability` segment proved that preserving discrete behavioral groups works better than forcing them into a single numeric scale. **One idea $\\rightarrow$ one feature $\\rightarrow$ one test.**
-        """)
+    **The Trap: Dimensionality vs. Signal**
+    Our dataset contained 17 categorical variables. Blindly one-hot encoding all of them creates a massive, sparse matrix that dilutes the predictive power of the tree algorithms. Furthermore, blindly dividing columns to create math features (e.g., `cost_per_service = MonthlyCharges / num_services`) rarely works because tree-based models already capture basic non-linear math interactions natively.
+    
+    **The Solution: Behavioral Compression**
+    Feature engineering is about compressing sparse categories into dense behavioral signals. 
+    * **The Stability Meta-Feature:** Instead of treating `Partner` and `Dependents` as separate binary flags, we combined them into a single `Stability` segment. Preserving this discrete behavioral group proved to carry more signal than treating them independently.
+    * **Service Entrenchment:** Instead of just looking at "Has Streaming TV" and "Has Online Security" independently, recognizing the *total volume* of services a user subscribes to often creates a strong monotonic relationship with loyalty. The more entrenched a customer is in the ecosystem, the higher the friction to cancel.
+    
+    **Core Rule:** One idea $\\rightarrow$ one feature $\\rightarrow$ one validation test against the baseline.
+    """)
 
 # ==========================================
 # PAGE 05: CONCEPT DRIFT MATRIX
