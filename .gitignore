@@ -47,14 +47,7 @@ credentials.json
 *.ipynb_checkpoints
 
 # ── Data Files (use DVC or store externally) ─────────────────
-data/raw/
-data/processed/
-data/external/
-data/interim/
-!data/.gitkeep
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-!data/external/.gitkeep
+
 
 # Common data formats
 *.csv
