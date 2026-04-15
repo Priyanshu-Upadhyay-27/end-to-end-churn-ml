@@ -1,17 +1,12 @@
-# --- Backend (FastAPI) ---
-fastapi
-uvicorn
 pydantic
-joblib
-
-# --- Frontend (Streamlit) ---
-streamlit
 requests
-
-# --- Machine Learning Stack ---
-pandas
 numpy
-scikit-learn == 1.7.2
-xgboost == 3.2.0
 mlflow
-plotly
+fastapi==0.135.3
+joblib==1.5.3
+pandas==2.3.3
+plotly==6.7.0
+scikit-learn==1.7.2
+streamlit==1.56.0
+uvicorn==0.44.0
+xgboost==3.2.0
