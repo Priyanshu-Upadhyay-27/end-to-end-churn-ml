@@ -50,7 +50,6 @@ credentials.json
 
 
 # Common data formats
-*.csv
 *.tsv
 *.parquet
 *.feather
