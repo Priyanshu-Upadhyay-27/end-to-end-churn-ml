@@ -68,45 +68,52 @@ graph TD
 Beyond a static Jupyter Notebook, this project treats machine learning as a continuous software engineering lifecycle. The pipeline is broken into four distinct enterprise phases, tracking how raw data is transformed into explicit, deployable artifacts, and ultimately monitored by an automated feedback loop.
 
 ```mermaid
-graph TD
+graph LR
     %% Phase 1
     subgraph Phase 1: Data Engineering
         direction TB
         D1[Raw Telecom Data] --> D2[Custom Scikit-Learn Transformers]
-        D2 -.-> R1>Artifact: Cleaned Feature Matrix & Encoders]
+        D2 -.-> R1>Artifact: Cleaned Feature Matrix]
     end
 
     %% Phase 2
     subgraph Phase 2: Model Development
         direction TB
-        D2 --> M1[XGBoost Classifier]
-        M1 --> M2[Threshold Tuning for Recall@20]
+        M1[XGBoost Classifier] --> M2[Threshold Tuning for Recall@20]
         M2 -.-> R2>Artifact: production_pipeline.pkl]
     end
 
     %% Phase 3
     subgraph Phase 3: Cloud Deployment
         direction TB
-        M2 --> P1[FastAPI Backend via Docker]
-        P1 --> P2[Streamlit Business UI]
+        P1[FastAPI Backend via Docker] --> P2[Streamlit Business UI]
         P2 -.-> R3>Artifact: Live Cloud Inference Engine]
     end
 
     %% Phase 4
     subgraph Phase 4: Continuous MLOps
         direction TB
-        P2 --> O1[Live Concept Drift Simulator]
-        O1 --> O2[SLA Drop Trigger & Shadow Retrain]
+        O1[Live Concept Drift Simulator] --> O2[SLA Drop & Shadow Retrain]
         O2 -.-> R4>Artifact: retrained_challenger.pkl]
     end
+
+    %% The Main Core Flow (Thick Arrows linking the phases)
+    D2 ==> M1
+    M2 ==> P1
+    P2 ==> O1
+
+    %% The Continuous Feedback Loop
+    O2 -. "Performance Drop Triggers Pipeline Reset" .-> D1
 
     %% Styling Elements (Forced Black Text & Distinct Shapes)
     classDef default color:#000000;
     classDef process fill:#e3f2fd,stroke:#1e88e5,stroke-width:2px,color:#000000;
     classDef artifact fill:#fffde7,stroke:#fbc02d,stroke-width:2px,stroke-dasharray: 5 5,color:#000000;
+    classDef alert fill:#ffebee,stroke:#e53935,stroke-width:2px,color:#000000;
 
-    class D1,D2,M1,M2,P1,P2,O1,O2 process;
+    class D1,D2,M1,M2,P1,P2,O1 process;
     class R1,R2,R3,R4 artifact;
+    class O2 alert;
 ```
 
 ---
