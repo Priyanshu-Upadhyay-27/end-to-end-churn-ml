@@ -28,13 +28,13 @@ graph TD
     Client((Client / Browser))
 
     %% Streamlit Environment
-    subgraph Streamlit [&quot;Frontend: Streamlit Community Cloud&quot;]
+    subgraph Streamlit ["Frontend: Streamlit Community Cloud"]
         direction TB
         App[app.py - Main Dashboard]
     end
 
     %% Render Environment
-    subgraph Render [&quot;Backend: Render Cloud&quot;]
+    subgraph Render ["Backend: Render Cloud"]
         direction TB
         FastAPI[api.py - FastAPI Server]
         Namespace[sys.module __main__ Injection]
@@ -42,12 +42,12 @@ graph TD
     end
 
     %% Core Prediction Flow
-    Client -- &quot;1. Uploads CSV / JSON Action&quot; --&gt; App
-    App -- &quot;2. POST /predict Payload&quot; --&gt; FastAPI
-    FastAPI -- &quot;3. Resolves Custom Transforms&quot; --&gt; Namespace
-    Namespace -- &quot;4. Deserializes Model&quot; --&gt; XGBoost
-    XGBoost -- &quot;5. Returns Risk Probabilities&quot; --&gt; FastAPI
-    FastAPI -- &quot;6. Displays Recall@20 Ranks&quot; --&gt; App
+    Client -- "1. Uploads CSV / JSON Action" --> App
+    App -- "2. POST /predict Payload" --> FastAPI
+    FastAPI -- "3. Resolves Custom Transforms" --> Namespace
+    Namespace -- "4. Deserializes Model" --> XGBoost
+    XGBoost -- "5. Returns Risk Probabilities" --> FastAPI
+    FastAPI -- "6. Displays Recall@20 Ranks" --> App
 
     %% Styling Elements
     classDef browser fill:#ececff,stroke:#9370db,stroke-width:2px;
