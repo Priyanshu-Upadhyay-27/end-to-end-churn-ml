@@ -503,7 +503,7 @@ elif page == "Data Insights (EDA)":
 # ==========================================
 # PAGE 05: CONCEPT DRIFT MATRIX
 # ==========================================
-elif "Concept Drift Matrix" == page:
+elif "Concept Drift Simulator" == page:
     # ==========================================
     # 2. INTERNAL MODEL LOGIC
     # ==========================================
