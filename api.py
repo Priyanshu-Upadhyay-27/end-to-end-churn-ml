@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from typing import Union
 import pandas as pd
 import joblib
 import os
@@ -66,7 +67,7 @@ class CustomerData(BaseModel):
     PaperlessBilling: str
     PaymentMethod: str
     MonthlyCharges: float
-    TotalCharges: str
+    TotalCharges: Union[str, float]
 
 # --- API INITIALIZATION ---
 app = FastAPI(title="Telecom Churn Production API")
