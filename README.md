@@ -24,19 +24,39 @@ This project is built on a decoupled, cloud-ready architecture to ensure distinc
 
 ```mermaid
 graph TD
-    subgraph Streamlit Community Cloud
-        UI[Streamlit Frontend <br> app.py]
+    %% Client Node
+    Client((Client / Browser))
+
+    %% Streamlit Environment
+    subgraph Streamlit [&quot;Frontend: Streamlit Community Cloud&quot;]
+        direction TB
+        App[app.py - Main Dashboard]
     end
-    
-    subgraph Render Cloud Platform
-        API[FastAPI Server <br> api.py]
-        Model[(XGBoost Pipeline <br> production_pipeline.pkl)]
+
+    %% Render Environment
+    subgraph Render [&quot;Backend: Render Cloud&quot;]
+        direction TB
+        FastAPI[api.py - FastAPI Server]
+        Namespace[sys.module __main__ Injection]
+        XGBoost[(XGBoost Pipeline .pkl)]
     end
-    
-    UI -- 1. JSON Payload --> API
-    API -- 2. Deserialize & Predict --> Model
-    Model -- 3. Risk Probabilities --> API
-    API -- 4. Real-time Response --> UI
+
+    %% Core Prediction Flow
+    Client -- &quot;1. Uploads CSV / JSON Action&quot; --&gt; App
+    App -- &quot;2. POST /predict Payload&quot; --&gt; FastAPI
+    FastAPI -- &quot;3. Resolves Custom Transforms&quot; --&gt; Namespace
+    Namespace -- &quot;4. Deserializes Model&quot; --&gt; XGBoost
+    XGBoost -- &quot;5. Returns Risk Probabilities&quot; --&gt; FastAPI
+    FastAPI -- &quot;6. Displays Recall@20 Ranks&quot; --&gt; App
+
+    %% Styling Elements
+    classDef browser fill:#ececff,stroke:#9370db,stroke-width:2px;
+    classDef frontend fill:#ffe6e6,stroke:#ff4b4b,stroke-width:2px;
+    classDef backend fill:#e6ffe6,stroke:#009688,stroke-width:2px;
+
+    class Client browser;
+    class App frontend;
+    class FastAPI,Namespace,XGBoost backend;
 ```
 
 * **The Brain (Backend):** A FastAPI server hosting a serialized, two-phase XGBoost pipeline. It automatically generates interactive Swagger documentation at `/docs` for seamless third-party testing.
