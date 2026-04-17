@@ -49,10 +49,10 @@ graph TD
     XGBoost -- "5. Returns Risk Probabilities" --> FastAPI
     FastAPI -- "6. Displays Recall@20 Ranks" --> App
 
-    %% Styling Elements
-    classDef browser fill:#ececff,stroke:#9370db,stroke-width:2px;
-    classDef frontend fill:#ffe6e6,stroke:#ff4b4b,stroke-width:2px;
-    classDef backend fill:#e6ffe6,stroke:#009688,stroke-width:2px;
+    %% Styling Elements (Forced Black Text for Contrast)
+    classDef browser fill:#ececff,stroke:#9370db,stroke-width:2px,color:#000000;
+    classDef frontend fill:#ffe6e6,stroke:#ff4b4b,stroke-width:2px,color:#000000;
+    classDef backend fill:#e6ffe6,stroke:#009688,stroke-width:2px,color:#000000;
 
     class Client browser;
     class App frontend;
