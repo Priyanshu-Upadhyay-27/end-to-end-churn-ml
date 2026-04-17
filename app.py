@@ -178,13 +178,13 @@ def render_input_form(key_prefix):
 
 
 # --- SIDEBAR NAVIGATION ---
-st.sidebar.title("System // Menu")
+st.sidebar.title("System Nav")
 page = st.sidebar.radio("Navigation", [
     "Introduction",
     "Business Strategy (Recall@20)",
     "Model Predictions",
     "Data Insights (EDA)",
-    "Concept Drift Matrix"
+    "Concept Drift Simulator"
 ], key="main_nav")
 
 st.sidebar.divider()
