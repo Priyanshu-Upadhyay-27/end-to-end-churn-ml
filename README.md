@@ -194,8 +194,8 @@ The UI is divided into 5 distinct operational modules:
 
 ## 👨‍💻 Author
 **Priyanshu Upadhyay**
-* [LinkedIn](Insert LinkedIn Link)
-* [Portfolio](Insert Portfolio Link)
+* [LinkedIn](https://www.linkedin.com/in/priyanshu-upadhyay-cse/)
+* [Github](https://github.com/Priyanshu-Upadhyay-27/)
 
 *Designed with a focus on scalable MLOps, rigorous software engineering, and quantifiable business value.*
 ```
