@@ -210,5 +210,8 @@ This project is the original intellectual property of Priyanshu Upadhyay, develo
 
 *© 2026 Priyanshu Upadhyay. All rights reserved. Designed with a focus on scalable MLOps, rigorous software engineering, and quantifiable business value.*
 
-*Designed with a focus on scalable MLOps, rigorous software engineering, and quantifiable business value.*
+<div align="center">
 
+*✨ Designed with a focus on scalable MLOps, rigorous software engineering, and quantifiable business value.*
+
+</div>
