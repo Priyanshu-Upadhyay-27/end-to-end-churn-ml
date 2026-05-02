@@ -192,10 +192,23 @@ The UI is divided into 5 distinct operational modules:
 
 ---
 
-## 👨‍💻 Author
-**Priyanshu Upadhyay**
-* [LinkedIn](https://www.linkedin.com/in/priyanshu-upadhyay-cse/)
-* [Github](https://github.com/Priyanshu-Upadhyay-27/)
+---
+
+## 🛡️ Creator & Identity
+
+**Created and Maintained by Priyanshu Upadhyay**
+
+This project is the original intellectual property of Priyanshu Upadhyay, developed to showcase end-to-end MLOps deployment, cloud architecture, and business-focused machine learning.
+
+**About the Developer:**
+* **Education:** Computer Science and Engineering Undergraduate at KIET Group of Institutions.
+* **Specialization:** Machine Learning, MLOps, scalable system architecture, and predictive analytics.
+
+**Connect:**
+* **GitHub:** [Priyanshu-Upadhyay-27](https://github.com/Priyanshu-Upadhyay-27)
+* **LinkedIn:** [Priyanshu Upadhyay](https://www.linkedin.com/in/priyanshu-upadhyay-cse/) 
+
+*© 2026 Priyanshu Upadhyay. All rights reserved. Designed with a focus on scalable MLOps, rigorous software engineering, and quantifiable business value.*
 
 *Designed with a focus on scalable MLOps, rigorous software engineering, and quantifiable business value.*
 ```
