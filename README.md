@@ -165,7 +165,7 @@ The UI is divided into 5 distinct operational modules:
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/Priyanshu-Upadhyay-27/end-to-end-churn-ml.git](https://github.com/Priyanshu-Upadhyay-27/end-to-end-churn-ml.git)
+   git clone https://github.com/Priyanshu-Upadhyay-27/end-to-end-churn-ml.git
    cd end-to-end-churn-ml
    ```
 
