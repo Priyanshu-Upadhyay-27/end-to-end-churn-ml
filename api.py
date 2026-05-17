@@ -77,7 +77,9 @@ app = FastAPI(title="Telecom Churn Production API")
 model = None
 PIPELINE_PATH = "production_pipeline.pkl"
 
-
+@app.get("/")
+async def root():
+    return {"status": "healthy", "message": "Telecom Churn Production API is fully operational"}
 @app.on_event("startup")
 async def startup_event():
     global model
