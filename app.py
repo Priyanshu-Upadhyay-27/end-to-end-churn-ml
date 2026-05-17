@@ -11,7 +11,7 @@ import plotly.express as px
 from sklearn.base import clone
 from sklearn.metrics import recall_score
 from sklearn.preprocessing import FunctionTransformer
-
+BATCH_API_URL = "http://127.0.0.1:8000/predict_batch"
 
 # ==========================================
 # 1. CUSTOM FUNCTIONS (MUST BE DEFINED FIRST)
