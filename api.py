@@ -7,8 +7,7 @@ import os
 import sys
 import uuid
 from sklearn.preprocessing import FunctionTransformer
-from database import engine, Base, AsyncSessionLocal, ChurnLog
-
+from database import init_db, save_predictions_to_db
 
 # --- CUSTOM PIPELINE FUNCTIONS ---
 def preprocessing_raw_data(X):
@@ -80,12 +79,13 @@ PIPELINE_PATH = "production_pipeline.pkl"
 @app.get("/")
 async def root():
     return {"status": "healthy", "message": "Telecom Churn Production API is fully operational"}
+
 @app.on_event("startup")
 async def startup_event():
     global model
     try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        # Replaced manual engine logic with the abstracted function call
+        await init_db()
     except Exception as e:
         print(f"DB ERROR: {e}")
 
@@ -94,23 +94,6 @@ async def startup_event():
             model = joblib.load(PIPELINE_PATH)
     except Exception as e:
         print(f"CRITICAL ERROR: {e}")
-
-
-async def save_predictions_to_db(predictions_list: list, mode: str, batch_id: str = None):
-    async with AsyncSessionLocal() as session:
-        db_logs = []
-        for item in predictions_list:
-            log = ChurnLog(
-                id=str(uuid.uuid4()),
-                prediction_mode=mode,
-                batch_id=batch_id,
-                input_features=item["features"],
-                churn_probability=item["probability"],
-                churn_prediction=item["prediction"]
-            )
-            db_logs.append(log)
-        session.add_all(db_logs)
-        await session.commit()
 
 
 @app.post("/predict")
@@ -131,7 +114,6 @@ async def predict(data: CustomerData, background_tasks: BackgroundTasks):
         return {"prediction": prediction, "probability": round(probability, 4), "status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @app.post("/predict_batch")
 async def predict_batch(data_list: list[CustomerData], background_tasks: BackgroundTasks):
