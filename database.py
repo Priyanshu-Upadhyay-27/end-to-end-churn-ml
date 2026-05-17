@@ -8,16 +8,22 @@ from sqlalchemy.dialects.postgresql import JSONB
 from dotenv import load_dotenv
 load_dotenv()
 
-raw_url = os.environ.get("DATABASE_URL", "postgresql+asyncpg://user:password@localhost:5432/churn_db")
+# 1. Grab the URL from Render's environment variables
+raw_url = os.environ.get("DATABASE_URL", "postgresql+asyncpg://myuser:mypassword@localhost:5432/churn_db")
+
+# 2. Bulletproof conversion: Catch BOTH 'postgres://' and 'postgresql://'
 if raw_url.startswith("postgres://"):
     db_url = raw_url.replace("postgres://", "postgresql+asyncpg://", 1)
+elif raw_url.startswith("postgresql://"):
+    # This block prevents SQLAlchemy from falling back to psycopg2
+    db_url = raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 else:
     db_url = raw_url
 
+# 3. Create the Engine using the corrected async URL
 engine = create_async_engine(db_url, echo=False)
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 Base = declarative_base()
-
 class ChurnLog(Base):
     __tablename__ = "churn_predictions"
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
