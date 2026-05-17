@@ -2,36 +2,64 @@ import os
 import uuid
 from datetime import datetime
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy import Column, String, Float, DateTime, Integer
+from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import Column, String, Float, Integer, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
 from dotenv import load_dotenv
 load_dotenv()
 
-# 1. Grab the URL from Render's environment variables
-raw_url = os.environ.get("DATABASE_URL", "postgresql+asyncpg://myuser:mypassword@localhost:5432/churn_db")
+raw_db_url = os.environ.get("DATABASE_URL", "sqlite+aiosqlite:///./local_fallback.db")
 
-# 2. Bulletproof conversion: Catch BOTH 'postgres://' and 'postgresql://'
-if raw_url.startswith("postgres://"):
-    db_url = raw_url.replace("postgres://", "postgresql+asyncpg://", 1)
-elif raw_url.startswith("postgresql://"):
-    # This block prevents SQLAlchemy from falling back to psycopg2
-    db_url = raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+# --- DYNAMIC CLOUD DRIVER PARSING ---
+#raw_db_url = os.environ.get("DATABASE_URL", "sqlite+aiosqlite:///./local_fallback.db")
+
+if raw_db_url.startswith("postgres://"):
+    db_url = raw_db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+elif raw_db_url.startswith("postgresql://") and "asyncpg" not in raw_db_url:
+    db_url = raw_db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 else:
-    db_url = raw_url
+    db_url = raw_db_url
 
-# 3. Create the Engine using the corrected async URL
+# --- DB ENGINE SETUP ---
 engine = create_async_engine(db_url, echo=False)
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 Base = declarative_base()
+
+# --- SCHEMA ---
 class ChurnLog(Base):
     __tablename__ = "churn_predictions"
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+
+    id = Column(String, primary_key=True, index=True)
+    timestamp = Column(DateTime, index=True, default=datetime.utcnow)
     prediction_mode = Column(String, default="single")
-    batch_id = Column(String, nullable=True, index=True)
+    batch_id = Column(String, index=True, nullable=True)
     input_features = Column(JSONB, nullable=False)
     churn_probability = Column(Float, nullable=False)
     churn_prediction = Column(Integer, nullable=False)
-    model_version = Column(String, default="v1.0")
-    model_configs = Column(JSONB, nullable=True)
+
+# --- INDEPENDENT ABSTRACTION FUNCTIONS ---
+async def init_db():
+    """Called by api.py on startup to create tables without exposing the engine."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+async def save_predictions_to_db(predictions_list: list, mode: str, batch_id: str = None):
+    """Handles saving both single and batch predictions strictly inside the DB layer."""
+    async with AsyncSessionLocal() as session:
+        try:
+            db_logs = []
+            for item in predictions_list:
+                log = ChurnLog(
+                    id=str(uuid.uuid4()),
+                    prediction_mode=mode,
+                    batch_id=batch_id,
+                    input_features=item["features"],
+                    churn_probability=item["probability"],
+                    churn_prediction=item["prediction"]
+                )
+                db_logs.append(log)
+            session.add_all(db_logs)
+            await session.commit()
+        except Exception as e:
+            await session.rollback()
+            print(f"DB ERROR: Failed to save logs - {e}")
