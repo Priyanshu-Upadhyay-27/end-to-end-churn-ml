@@ -20,6 +20,16 @@ It features a decoupled architecture with a FastAPI prediction engine, a persist
 
 ---
 
+## 📊 Model Performance
+
+The final model was evaluated using both traditional machine learning metrics and a business-oriented ranking metric.
+
+| Metric | Score | Why it matters |
+|---------|:-----:|----------------|
+| **ROC-AUC** | **0.8487** | Measures the model's ability to distinguish between customers who churn and those who stay. |
+| **Recall** | **0.8500** | Captures 85% of all actual churners in the test set. |
+| **Recall@20%** | **0.5036** | Measures how many actual churners are captured within the top 20% highest-risk customers ranked by the model. This aligns with real-world retention campaigns where businesses have limited outreach capacity. |
+
 ## 🏗 System Architecture & Tech Stack
 
 This project is built on a decoupled, cloud-ready architecture to ensure distinct separation of concerns between the user interface, the inference engine, and the telemetry storage layer.
