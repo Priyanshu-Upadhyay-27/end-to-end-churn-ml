@@ -22,5 +22,6 @@ COPY production_pipeline.pkl .
 # We need to expose a backend port, at which virtual ethernet cable is connected,
 # and form a veth pair with another container
 EXPOSE 8000
-# This also executes a command, but when the images spins up and make a live container.
+
+# This also executes a command, but when the images spins up and make a live container, not during image creation.
 CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]

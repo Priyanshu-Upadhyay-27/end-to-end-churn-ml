@@ -11,12 +11,16 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Coped significant files
 COPY app.py .
 COPY production_pipeline.pkl .
 
 COPY data/raw/stream_data.csv ./data/raw/stream_data.csv
 COPY data/raw/train_data.csv ./data/raw/train_data.csv
 
+# We need to expose a backend port, at which virtual ethernet cable is connected,
+# and form a veth pair with another container
 EXPOSE 8501
 
+# This also executes a command, but when the images spins up and make a live container, not during image creation.
 CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
