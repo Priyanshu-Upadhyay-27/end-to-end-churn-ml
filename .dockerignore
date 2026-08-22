@@ -4,3 +4,30 @@ __pycache__/
 .git/
 .env
 .ipynb_checkpoints/
+
+# training artifacts — not used at runtime by api.py or app.py
+mlruns/
+mlflow.db
+
+# non-runtime folders from your repo
+notebooks/
+docs/
+tests/
+configs/
+src/
+
+# unused data — only stream_data.csv and train_data.csv are needed, and
+# those are copied explicitly by exact path, but this keeps the build
+# context small and prevents accidental inclusion if a COPY line changes
+data/processed/
+
+# IDE/editor clutter
+.idea/
+
+# docs/meta files, not needed inside any image
+LICENSE
+README.md
+project_analysis.md
+
+# not imported by either api.py or app.py based on your code
+main.py
