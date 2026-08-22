@@ -1,0 +1,43 @@
+services:
+
+  db:
+    image: postgres:16-alpine
+    container_name: churn_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: churn_admin
+      POSTGRES_PASSWORD: yourpassword
+      POSTGRES_DB: churn_logs
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # No "ports:" — stays fully private, reachable only by backend internally.
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: churn_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://churn_admin:yourpassword@db:5432/churn_logs
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"   # exposed for direct API testing (curl/Postman)
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: churn_frontend
+    restart: unless-stopped
+    environment:
+      CHURN_API_URL: http://backend:8000
+    depends_on:
+      - backend
+    ports:
+      - "80:8501"   # main public entry point for the app
+
+volumes:
+  pgdata:
+    driver: local
