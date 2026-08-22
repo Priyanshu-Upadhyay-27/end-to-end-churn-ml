@@ -2,12 +2,11 @@
 # documentation free, less space taking python x.xx image.
 FROM python:3.10-slim
 
-# We define the work directory in which we work
+# We define the work directory in which we work.
 WORKDIR /app
 
 # These are some command which are run when the image creation is in progress,
 # when the image build is completed, the things below are present as a sub layer in the image.
-
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*
 
