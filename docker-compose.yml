@@ -10,25 +10,20 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    # No "ports:" — stays fully private, reachable only by backend internally.
 
   backend:
-    build:
-      context: .
-      dockerfile: backend.dockerfile
+    image: priyanshudock27/churn-backend:v1.0
     container_name: churn_backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/churn_logs
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     depends_on:
       - db
     ports:
-      - "8000:8000"   # exposed for direct API testing (curl/Postman)
+      - "8000:8000"
 
   frontend:
-    build:
-      context: .
-      dockerfile: frontend.dockerfile
+    image: priyanshudock27/churn-frontend:v1.0
     container_name: churn_frontend
     restart: unless-stopped
     environment:
@@ -36,7 +31,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "80:8501"   # main public entry point for the app
+      - "80:8501"
 
 volumes:
   pgdata:
