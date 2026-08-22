@@ -15,11 +15,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends build-essential
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-
+# Copy only required file in the backend container image.
 COPY api.py .
 COPY database.py .
 COPY production_pipeline.pkl .
 
+# We need to expose a backend port, at which virtual ethernet cable is connected,
+# and form a veth pair with another container
 EXPOSE 8000
-
+# This also executes a command, but when the images spins up and make a live container.
 CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
