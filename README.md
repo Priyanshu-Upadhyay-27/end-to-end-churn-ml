@@ -232,6 +232,62 @@ The UI is divided into 5 distinct operational modules:
 
 ---
 
+## 🐳 Running with Docker (Pre-built Images)
+
+Pre-built images are available on Docker Hub — no need to build from source.
+
+### 1. Pull the images
+
+```bash
+docker pull priyanshudock27/churn-backend:v2.0prod
+docker pull priyanshudock27/churn-frontend:v2.0prod
+```
+
+### 2. Set up environment variables
+
+Create a `.env` file in the project root with the following variables:
+
+```env
+POSTGRES_USER=your_db_username
+POSTGRES_PASSWORD=your_db_password
+POSTGRES_DB=your_db_name
+```
+
+> ⚠️ Never commit your `.env` file. It's already excluded via `.gitignore`.
+
+### 3. Run with Docker Compose
+
+Using the `docker-compose.prod.yml` file included in this repo:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env up -d
+```
+
+This starts three containers:
+| Service | Description | Port |
+|---|---|---|
+| `frontend` | Streamlit UI | `80` |
+| `backend` | FastAPI prediction API | `8000` |
+| `db` | PostgreSQL (internal only — not exposed) | — |
+
+### 4. Verify it's running
+
+```bash
+docker compose -f docker-compose.prod.yml ps
+```
+
+Once running:
+- App: `http://localhost` (or your server's IP)
+- API docs: `http://localhost:8000/docs`
+
+### 5. Stop and clean up
+
+```bash
+docker compose -f docker-compose.prod.yml down -v
+```
+
+---
+
 ## 🛡️ Creator & Identity
 
 **Created and Maintained by Priyanshu Upadhyay**
